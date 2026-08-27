@@ -140,6 +140,10 @@ export function validate(files: FileMap): ValidationResult {
       if (/OPENAI_API_KEY\s*=\s*sk-/.test(content)) {
         errors.push({ file: path, severity: 'error', rule: 'secret-leaked', message: '.env.example contém chave OpenAI real' });
       }
+      // Google Gemini: AIza... são chaves reais (não devem aparecer no .env.example)
+      if (/GOOGLE_(?:GENERATIVE_AI_)?API_KEY\s*=\s*AIza/.test(content)) {
+        errors.push({ file: path, severity: 'error', rule: 'secret-leaked', message: '.env.example contém chave Google Gemini real' });
+      }
     }
   }
 

@@ -1,13 +1,17 @@
 /**
- * Helpers de IA (OpenAI) usados pelo Gerador.
+ * Helpers de IA (Google Gemini) usados pelo Gerador.
+ *
+ * SDK oficial: @google/generative-ai
+ * Modelo padrão: gemini-2.0-flash (free tier: 15 req/min, 1500 req/dia)
+ * Obtenha sua chave grátis em: https://aistudio.google.com/apikey
+ *
  * Resposta validada por Zod em todas as rotas.
  */
-import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 
-export const MODEL_DEFAULT = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-export const MODEL_FALLBACK = 'gpt-4o-mini';
+export const MODEL_DEFAULT = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+export const MODEL_FALLBACK = 'gemini-2.5-flash';
 
 export interface AiCallOptions {
   model?: string;
@@ -17,20 +21,32 @@ export interface AiCallOptions {
   maxTokens?: number;
 }
 
-export async function callOpenAI(opts: AiCallOptions): Promise<string> {
-  const model = opts.model || MODEL_DEFAULT;
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY não configurada');
+function getKey(): string {
+  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!key) {
+    throw new Error('GEMINI_API_KEY não configurada. Obtenha grátis em https://aistudio.google.com/apikey');
   }
-  const { text } = await generateText({
-    model: openai(model),
-    system: opts.system,
-    prompt: opts.user,
-    temperature: opts.temperature ?? 0.4,
-    maxTokens: opts.maxTokens ?? 4000,
-  });
-  return text;
+  return key;
 }
+
+export async function callOpenAI(opts: AiCallOptions): Promise<string> {
+  const genai = new GoogleGenerativeAI(getKey());
+  const model = opts.model || MODEL_DEFAULT;
+  const m = genai.getGenerativeModel({
+    model,
+    systemInstruction: opts.system,
+    generationConfig: {
+      temperature: opts.temperature ?? 0.4,
+      maxOutputTokens: opts.maxTokens ?? 8000,
+    },
+  });
+  const result = await m.generateContent(opts.user);
+  const text = result.response.text();
+  return text ?? '';
+}
+
+/** Alias semântico (mantido para retrocompatibilidade com imports existentes). */
+export const callGemini = callOpenAI;
 
 /** Extrai JSON de uma resposta (mesmo se vier com markdown ou ruído em volta). */
 export function extractJson<T>(raw: string, schema: z.ZodType<T>): T {
@@ -43,7 +59,7 @@ export function extractJson<T>(raw: string, schema: z.ZodType<T>): T {
   if (m) {
     try { return schema.parse(JSON.parse(m[1])); } catch {}
   }
-  // Tenta último { ... } balanceado
+  // Tenta primeiro { ... } balanceado
   const start = raw.indexOf('{');
   if (start >= 0) {
     let depth = 0;
