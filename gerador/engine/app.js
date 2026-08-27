@@ -77,9 +77,14 @@ function defaultData(company='',client='',segment='',city=''){
 function applyModelPreset(project, modelId){
   const p = (MODEL_PRESETS && MODEL_PRESETS[modelId]) || {};
   const d = project.data || (project.data = {});
+  // Nome sugerido: SEMPRE preenche se o usuário não digitou nada (ou se veio vazio do defaultData)
+  if(p.company && !d.company) d.company = p.company;
+  if(!d.trade) d.trade = d.company || p.company || '';
   if(p.slogan && !d.slogan) d.slogan = p.slogan;
   if(p.about && !d.about) d.about = p.about;
   if(p.segment) d.segment = p.segment;
+  if(p.city && !d.city) d.city = p.city;
+  if(p.state && !d.state) d.state = p.state;
   if(p.heroStyle) d.heroStyle = p.heroStyle;
   if(p.services && p.services.length && (!d.services||d.services.length===0)){
     d.services = p.services.map((s,i)=>Object.assign({icon:['⚡','★','✓','◆','●','✦'][i%6]},s));
@@ -134,7 +139,28 @@ function render(){
     case 'editor':    renderEditor(c); break;
     default: renderDashboard(c);
   }
+  // Após render, ajusta o scale dos mini-sites dentro dos cards
+  requestAnimationFrame(()=>fitMiniSites());
 }
+
+/* ---------- MINI-SITE SCALE ----------
+   Cada card do modelo mostra um site real renderizado em viewport 1280px.
+   Esta função aplica o transform: scale para caber no card (~300px de largura).
+*/
+function fitMiniSites(){
+  const REAL_W = 1280;
+  const cards = document.querySelectorAll('.model-mini');
+  cards.forEach(el=>{
+    const card = el.closest('.model-preview');
+    if(!card) return;
+    const cardWidth = card.clientWidth || 300;
+    const scale = cardWidth / REAL_W;
+    el.style.transform = `scale(${scale})`;
+    // Após scale, o card-preview fica com altura real = altura natural * scale
+    // Ajustamos para que apareça o hero inteiro (limitamos a altura do conteúdo real).
+  });
+}
+window.addEventListener('resize', fitMiniSites);
 
 /* ---------- DASHBOARD ---------- */
 function renderDashboard(c){
@@ -208,236 +234,420 @@ function setFilter(f){STATE.filter=f;render()}
 function modelCard(m){
   const preset = (typeof MODEL_PRESETS!=='undefined' && MODEL_PRESETS[m.id])||{};
   const slogan = preset.slogan||'';
+  const about = preset.about||'';
+  const seg = preset.segment||'';
+  const city = preset.city||'';
+  const company = preset.company||m.name;
+  // Render real do site com os dados do preset (mini-versão dentro do card)
+  const miniHTML = modelMiniSite(m, preset);
   return `<div class="model-card" onclick="useModel('${m.id}')">
-    <div class="model-preview" data-layout="${m.mockLayout||'split'}" style="background:linear-gradient(135deg,${m.primary},${m.secondary||m.primary})">
+    <div class="model-preview" data-layout="${m.mockLayout||'split'}">
       <span class="model-tag">${catName(m.cat)}</span>
       <div class="model-name-large">${m.name}</div>
-      ${modelMockSVG(m)}
-      ${slogan?`<div class="model-slogan">${esc(slogan)}</div>`:''}
+      <div class="model-mini" data-model="${m.id}">${miniHTML}</div>
     </div>
     <div class="model-body">
       <div class="model-name">${m.name}</div>
-      <div class="model-desc">${m.desc}</div>
-      ${slogan?`<div class="model-slogan-sm">${esc(slogan.slice(0,80))}${slogan.length>80?'…':''}</div>`:''}
+      <div class="model-desc">${m.desc} · ${esc(seg)}</div>
+      ${slogan?`<div class="model-slogan-sm">"${esc(slogan.slice(0,80))}${slogan.length>80?'…':''}"</div>`:''}
     </div>
   </div>`;
+}
+
+// Gera um mini-site real (HTML renderizado por SiteGenerator) para mostrar no card.
+// Usa os dados do preset: company, slogan, about, services, differentials, heroStyle.
+function modelMiniSite(m, preset){
+  const tplId = (typeof MODEL_TO_TEMPLATE!=='undefined' && MODEL_TO_TEMPLATE[m.id]) || 'empresa-corporativa';
+  const tpl = (typeof TEMPLATES!=='undefined' && TEMPLATES[tplId]) || null;
+  const theme = {
+    colors:{
+      primary:m.primary,
+      secondary:m.secondary||m.primary,
+      accent:m.accent,
+      background:'#ffffff',
+      surface:'#f8f8fa',
+      text:'#0f172a',
+      textMuted:'#64748b',
+      border:'#e5e7eb',
+    },
+    typography:{heading:'Inter, system-ui, sans-serif',body:'Inter, system-ui, sans-serif'},
+    radius:'6px', spacing:'6px',
+    style:m.style||'moderno',
+  };
+  const fakeProject = {
+    modelId:m.id, templateId:tplId, template:tpl,
+    data:{
+      company: preset.company || m.name,
+      trade: preset.company || m.name,
+      slogan: preset.slogan || '',
+      segment: preset.segment || '',
+      city: preset.city || '',
+      state: preset.state || 'SP',
+      whatsapp:'(00) 00000-0000',phone:'(00) 0000-0000',email:'contato@empresa.com',
+      address:'Rua Principal, 123',instagram:'@empresa',facebook:'facebook.com/empresa',
+      cnpj:'',hours:'Seg a Sex — 8h às 18h',
+      about: preset.about || '',
+      services: (preset.services||[]).slice(0,3),
+      products: (preset.products||[]).slice(0,3),
+      differentials: (preset.differentials||[]).slice(0,3),
+      team: (preset.team||[]).slice(0,2),
+      testimonials: (preset.testimonials||[]).slice(0,2),
+      faq: (preset.faq||[]).slice(0,2),
+      ctaText:'Fale Conosco',ctaSecondary:'Saiba Mais',
+      whatsappMessage:'Olá, gostaria de saber mais.',
+      primaryColor:m.primary,secondaryColor:m.secondary||m.primary,accentColor:m.accent,
+      style:m.style||'moderno',
+      logo:null,images:[],
+      heroStyle: preset.heroStyle || 'A',
+    }
+  };
+  if(typeof SiteGenerator==='undefined') return '';
+  try{
+    const home = (tpl && tpl.pages && tpl.pages[0]) || {sections:['header','hero','services','about','differentials','cta','footer']};
+    const html = SiteGenerator.renderPageHTML(home, fakeProject, theme, SiteGenerator.buildProjectContent(fakeProject), []);
+    const css = SiteGenerator.sharedCSS ? SiteGenerator.sharedCSS(theme) : '';
+    return `<style>${css}
+/* ===== override card preview — site real dentro de ~300px ===== */
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:#fff;color:#222}
+.wrap{max-width:1280px;margin:0 auto;padding:0 40px}
+section{padding:28px 0}
+.alt{background:#f8f8fa}
+.site-header{position:relative;background:#fff;padding:10px 0;border-bottom:1px solid #e5e7eb}
+.site-header .wrap{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.site-header .logo{font-weight:700;font-size:14px;color:var(--primary,#0f172a)}
+.site-header .menu{display:flex;gap:14px}
+.site-header .menu a{color:#222;text-decoration:none;font-size:11px;font-weight:500}
+.site-header .btn{padding:6px 12px;font-size:11px;border-radius:6px;background:var(--primary);color:#fff;text-decoration:none}
+.hero{padding:40px 0;color:var(--text)}
+.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center}
+.hero h1{font-size:36px;line-height:1.1;margin:8px 0;font-weight:800;color:var(--text,#0f172a)}
+.hero p{font-size:13px;color:var(--text-muted,#64748b);margin:8px 0;line-height:1.55}
+.hero-img{width:240px;height:240px;background:var(--surface,#f8f8fa);border:1px solid var(--border,#e5e7eb);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:100px;font-weight:800;color:var(--primary);margin:0 auto}
+.hero .pill{display:inline-block;background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:99px;font-size:10px;font-weight:600;color:var(--text);letter-spacing:.5px;text-transform:uppercase}
+.hero .btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.hero .btn.btn-p{background:var(--primary);color:#fff}
+.hero .btn.btn-s{background:transparent;color:var(--text);border:1px solid var(--border)}
+.hero-cta{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.hero-center{text-align:center;max-width:760px;margin:0 auto}
+.hero-center .pill-center{display:inline-block;margin-bottom:12px}
+.hero-center .lead{font-size:15px}
+.hero-mag-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}
+.hero-mag-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left}
+.hero-mag-icon{width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:8px}
+.hero-svc-grid{display:grid;gap:8px}
+.hero-svc-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+.hero-svc-num{width:22px;height:22px;flex:none;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.hero-svc-item strong{display:block;font-size:12px;margin-bottom:2px;color:var(--text)}
+.hero-svc-item p{font-size:11px;color:var(--text-muted);margin:0}
+.hero-prop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}
+.hero-prop-card{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.hero-prop-img{height:90px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:var(--primary)}
+.hero-prop-card h3{font-size:12px;margin:10px 12px 4px;color:var(--text)}
+.hero-prop-card p{font-size:10.5px;color:var(--text-muted);margin:0 12px 12px;line-height:1.4}
+.hero-gallery{display:flex;gap:12px;margin-top:24px;justify-content:center;flex-wrap:wrap}
+.polaroid{width:90px;height:110px;background:#fff;border:1px solid #ddd;box-shadow:0 4px 12px rgba(0,0,0,.08);border-radius:2px;padding:5px;display:flex;flex-direction:column;gap:2px;transform:rotate(var(--r,-2deg))}
+.polaroid.p1{--r:-4deg}.polaroid.p2{--r:2deg}.polaroid.p3{--r:-1deg}.polaroid.p4{--r:3deg}
+.polaroid div{flex:1;background:var(--surface);border-radius:1px}
+.polaroid span{font-size:8px;color:#666;text-align:center;padding:2px 0}
+.product-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--surface);border-radius:12px;font-size:80px;font-weight:800;color:var(--primary)}
+.product-spot{aspect-ratio:1;display:flex}
+.sec-head{text-align:center;margin-bottom:18px}
+.sec-head h2{font-size:24px;font-weight:700;margin:0 0 4px;color:var(--text)}
+.sec-head p{font-size:13px;color:var(--text-muted);margin:0}
+.kicker{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left}
+.card .ico{width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:8px}
+.card h3{font-size:13px;margin:0 0 4px;color:var(--text)}
+.card p{font-size:11px;color:var(--text-muted);margin:0;line-height:1.5}
+.about-grid{display:grid;grid-template-columns:280px 1fr;gap:28px;align-items:center}
+.about-img{width:200px;height:200px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:60px;font-weight:800;color:var(--primary)}
+.lead{font-size:14px;color:var(--text)}
+.site-footer{background:var(--primary);color:#fff;padding:28px 0 14px}
+.site-footer .logo{font-weight:700;font-size:14px;color:#fff}
+.site-footer h4{font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;color:rgba(255,255,255,.7)}
+.site-footer p,.site-footer a{font-size:11px;color:rgba(255,255,255,.85);margin:3px 0;text-decoration:none}
+.footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:24px;margin-bottom:18px}
+.footer-bot{display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.65);padding-top:12px;border-top:1px solid rgba(255,255,255,.15)}
+.wa-float{position:fixed;bottom:14px;right:14px;width:36px;height:36px;border-radius:50%;background:#22c55e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.hero-simple{padding:32px 0;text-align:center}
+.hero-simple h1{font-size:32px;font-weight:800;color:var(--text)}
+</style>${html}`;
+  }catch(e){
+    return `<div style="padding:20px;color:#888;font-size:12px">Erro: ${esc(e.message)}</div>`;
+  }
 }
 
 // 8 layouts SVG distintos para o card preview — cada modelo com mockLayout
 function modelMockSVG(m){
   const L = m.mockLayout||'split';
   const p = m.primary, s = m.secondary||m.primary, a = m.accent;
-  const t = (txt,opts={})=>`<text font-family="Inter,Arial" font-weight="${opts.w||400}" font-size="${opts.sz||9}" fill="${opts.fill||'#fff'}" x="${opts.x||20}" y="${opts.y||30}" ${opts.opacity?`opacity="${opts.opacity}"`:''}>${txt}</text>`;
+  const initial = (m.name||'?').charAt(0).toUpperCase();
 
+  // 1. SPLIT — clássico: copy à esquerda, bloco visual à direita
   if(L==='split'){
-    return `<svg viewBox="0 0 320 220" class="mock-svg">
-      <rect x="0" y="0" width="320" height="220" fill="${p}"/>
-      <rect x="0" y="0" width="320" height="40" fill="rgba(0,0,0,.25)"/>
-      <circle cx="20" cy="20" r="5" fill="${a}"/>
-      <rect x="36" y="14" width="50" height="10" rx="2" fill="#fff" opacity=".85"/>
-      <g transform="translate(36,72)">
-        <rect width="160" height="14" rx="3" fill="#fff" opacity=".95"/>
+    return `<svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" class="mock-svg">
+      <defs><linearGradient id="g${m.id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${p}"/><stop offset="100%" stop-color="${s}"/></linearGradient></defs>
+      <rect width="320" height="220" fill="url(#g${m.id})"/>
+      <rect width="320" height="38" fill="rgba(0,0,0,.3)"/>
+      <circle cx="18" cy="19" r="4" fill="${a}"/>
+      <rect x="30" y="14" width="48" height="9" rx="2" fill="#fff" opacity=".85"/>
+      <g transform="translate(28,80)">
+        <rect width="170" height="16" rx="3" fill="#fff"/>
         <rect y="28" width="130" height="6" rx="2" fill="#fff" opacity=".55"/>
-        <rect y="42" width="100" height="6" rx="2" fill="#fff" opacity=".4"/>
-        <rect y="62" width="55" height="18" rx="4" fill="${a}"/>
-        <rect x="70" y="62" width="55" height="18" rx="4" fill="none" stroke="#fff" stroke-width="1" opacity=".7"/>
+        <rect y="42" width="90" height="6" rx="2" fill="#fff" opacity=".4"/>
+        <rect y="64" width="62" height="22" rx="4" fill="${a}"/>
       </g>
-      <rect x="210" y="72" width="90" height="100" rx="6" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.25)"/>
-      <text x="255" y="135" font-family="Inter" font-size="36" font-weight="800" fill="#fff" opacity=".8" text-anchor="middle">${(m.name||'?').charAt(0)}</text>
+      <g transform="translate(218,68)">
+        <rect width="84" height="100" rx="8" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
+        <text x="42" y="64" font-size="40" font-weight="800" fill="#fff" text-anchor="middle" opacity=".85">${initial}</text>
+      </g>
     </svg>`;
   }
+
+  // 2. CENTERED / CENTERED-LIGHT — copy centralizada, fundo cor sólida ou claro
   if(L==='centered'||L==='centered-light'){
-    const bg = L==='centered-light' ? '#fff' : p;
     const dark = L==='centered-light';
-    return `<svg viewBox="0 0 320 220" class="mock-svg">
-      <rect x="0" y="0" width="320" height="220" fill="${bg}"/>
-      <rect x="0" y="0" width="320" height="40" fill="${dark?s:'rgba(255,255,255,.06)'}" opacity="${dark?.25:1}"/>
-      <circle cx="20" cy="20" r="5" fill="${a}"/>
-      <rect x="36" y="14" width="50" height="10" rx="2" fill="${dark?'#fff':'#0f172a'}" opacity="${dark?.85:1}"/>
-      <g transform="translate(160,130)" text-anchor="middle">
-        <rect x="-90" y="-58" width="180" height="18" rx="3" fill="${dark?'rgba(255,255,255,.15)':p+'22'}"/>
-        <rect x="-130" y="-30" width="260" height="14" rx="3" fill="${dark?'#fff':p}"/>
-        <rect x="-110" y="-8" width="220" height="6" rx="2" fill="${dark?'rgba(255,255,255,.5)':s}" opacity=".6"/>
-        <rect x="-95" y="12" width="190" height="6" rx="2" fill="${dark?'rgba(255,255,255,.4)':s}" opacity=".5"/>
-        <rect x="-30" y="36" width="60" height="22" rx="11" fill="${a}"/>
+    const bg = dark ? '#ffffff' : p;
+    const fg = dark ? p : '#fff';
+    const muted = dark ? p : s;
+    return `<svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" class="mock-svg">
+      <rect width="320" height="220" fill="${bg}"/>
+      <rect width="320" height="34" fill="${dark?s:'rgba(0,0,0,.25)'}"/>
+      <circle cx="18" cy="17" r="4" fill="${a}"/>
+      <rect x="30" y="12" width="48" height="9" rx="2" fill="${fg}" opacity=".85"/>
+      <g transform="translate(160,128)" text-anchor="middle">
+        <text y="-50" font-size="10" font-weight="700" fill="${a}" letter-spacing="2">${esc(m.segment||(m.cat==='institucional'?'INSTITUCIONAL':m.cat==='servicos'?'SERVIÇOS':'PROFISSIONAL'))}</text>
+        <rect x="-110" y="-38" width="220" height="18" rx="3" fill="${dark?p:fg}"/>
+        <rect x="-90" y="-12" width="180" height="5" rx="2" fill="${muted}" opacity=".55"/>
+        <rect x="-70" y="0" width="140" height="5" rx="2" fill="${muted}" opacity=".4"/>
+        <rect x="-35" y="22" width="70" height="22" rx="11" fill="${a}"/>
       </g>
     </svg>`;
   }
+
+  // 3. MAGAZINE — header + 3 colunas
   if(L==='magazine'){
-    return `<svg viewBox="0 0 320 220" class="mock-svg">
-      <rect x="0" y="0" width="320" height="120" fill="${p}"/>
-      <rect x="0" y="0" width="320" height="32" fill="rgba(0,0,0,.3)"/>
-      <circle cx="20" cy="16" r="5" fill="${a}"/>
-      <rect x="36" y="10" width="60" height="10" rx="2" fill="#fff" opacity=".85"/>
-      <rect x="20" y="50" width="180" height="14" rx="3" fill="#fff"/>
-      <rect x="20" y="72" width="120" height="6" rx="2" fill="#fff" opacity=".6"/>
-      <rect x="20" y="86" width="100" height="6" rx="2" fill="#fff" opacity=".4"/>
-      <g transform="translate(20,134)">
-        <rect width="86" height="76" rx="6" fill="${s}"/>
-        <rect x="14" y="14" width="20" height="20" rx="4" fill="${a}"/>
-        <rect x="14" y="42" width="58" height="4" rx="2" fill="#fff" opacity=".7"/>
-        <rect x="14" y="52" width="40" height="4" rx="2" fill="#fff" opacity=".5"/>
-      </g>
-      <g transform="translate(116,134)">
-        <rect width="86" height="76" rx="6" fill="${s}" opacity=".85"/>
-        <rect x="14" y="14" width="20" height="20" rx="4" fill="${a}"/>
-        <rect x="14" y="42" width="58" height="4" rx="2" fill="#fff" opacity=".7"/>
-        <rect x="14" y="52" width="40" height="4" rx="2" fill="#fff" opacity=".5"/>
-      </g>
-      <g transform="translate(212,134)">
-        <rect width="86" height="76" rx="6" fill="${s}" opacity=".7"/>
-        <rect x="14" y="14" width="20" height="20" rx="4" fill="${a}"/>
-        <rect x="14" y="42" width="58" height="4" rx="2" fill="#fff" opacity=".7"/>
-        <rect x="14" y="52" width="40" height="4" rx="2" fill="#fff" opacity=".5"/>
-      </g>
-    </svg>`;
-  }
-  if(L==='service-grid'){
-    return `<svg viewBox="0 0 320 220" class="mock-svg">
-      <rect x="0" y="0" width="320" height="220" fill="${p}"/>
-      <rect x="0" y="0" width="320" height="32" fill="rgba(0,0,0,.3)"/>
-      <circle cx="20" cy="16" r="5" fill="${a}"/>
-      <rect x="36" y="10" width="60" height="10" rx="2" fill="#fff" opacity=".85"/>
+    return `<svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" class="mock-svg">
+      <rect width="320" height="118" fill="${p}"/>
+      <rect width="320" height="30" fill="rgba(0,0,0,.32)"/>
+      <circle cx="18" cy="15" r="4" fill="${a}"/>
+      <rect x="30" y="10" width="54" height="9" rx="2" fill="#fff" opacity=".85"/>
       <g transform="translate(20,52)">
-        <rect width="130" height="14" rx="3" fill="#fff"/>
-        <rect y="24" width="100" height="6" rx="2" fill="#fff" opacity=".5"/>
+        <rect width="160" height="12" rx="2" fill="#fff"/>
+        <rect y="22" width="120" height="5" rx="2" fill="#fff" opacity=".55"/>
+        <rect y="34" width="80" height="5" rx="2" fill="#fff" opacity=".4"/>
       </g>
-      <g transform="translate(170,52)">
-        <rect width="130" height="32" rx="5" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.25)"/>
-        <circle cx="18" cy="16" r="9" fill="${a}"/>
-        <rect x="34" y="11" width="60" height="5" rx="1" fill="#fff"/>
-        <rect x="34" y="20" width="80" height="4" rx="1" fill="#fff" opacity=".6"/>
+      <g transform="translate(220,42)">
+        <circle r="22" fill="${a}" opacity=".9"/>
+        <text font-size="20" fill="#fff" text-anchor="middle" y="6">★</text>
       </g>
-      <g transform="translate(170,90)">
-        <rect width="130" height="32" rx="5" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.25)"/>
-        <circle cx="18" cy="16" r="9" fill="${a}"/>
-        <rect x="34" y="11" width="60" height="5" rx="1" fill="#fff"/>
-        <rect x="34" y="20" width="80" height="4" rx="1" fill="#fff" opacity=".6"/>
+      <g transform="translate(16,134)">
+        <rect width="92" height="78" rx="6" fill="${s}"/>
+        <rect x="14" y="14" width="22" height="22" rx="4" fill="${a}"/>
+        <rect x="14" y="48" width="60" height="5" rx="2" fill="#fff" opacity=".75"/>
+        <rect x="14" y="58" width="40" height="4" rx="2" fill="#fff" opacity=".5"/>
       </g>
-      <g transform="translate(170,128)">
-        <rect width="130" height="32" rx="5" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.25)"/>
-        <circle cx="18" cy="16" r="9" fill="${a}"/>
-        <rect x="34" y="11" width="60" height="5" rx="1" fill="#fff"/>
-        <rect x="34" y="20" width="80" height="4" rx="1" fill="#fff" opacity=".6"/>
+      <g transform="translate(114,138)">
+        <rect width="92" height="74" rx="6" fill="${s}" opacity=".85"/>
+        <rect x="14" y="14" width="22" height="22" rx="4" fill="${a}" opacity=".85"/>
+        <rect x="14" y="48" width="60" height="5" rx="2" fill="#fff" opacity=".7"/>
+        <rect x="14" y="58" width="36" height="4" rx="2" fill="#fff" opacity=".45"/>
+      </g>
+      <g transform="translate(212,142)">
+        <rect width="92" height="70" rx="6" fill="${s}" opacity=".7"/>
+        <rect x="14" y="14" width="22" height="22" rx="4" fill="${a}" opacity=".7"/>
+        <rect x="14" y="48" width="60" height="5" rx="2" fill="#fff" opacity=".55"/>
+        <rect x="14" y="58" width="32" height="4" rx="2" fill="#fff" opacity=".35"/>
       </g>
     </svg>`;
   }
+
+  // 4. SERVICE-GRID — copy à esquerda, lista compacta à direita
+  if(L==='service-grid'){
+    return `<svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" class="mock-svg">
+      <rect width="320" height="220" fill="${p}"/>
+      <rect width="320" height="30" fill="rgba(0,0,0,.32)"/>
+      <circle cx="18" cy="15" r="4" fill="${a}"/>
+      <rect x="30" y="10" width="54" height="9" rx="2" fill="#fff" opacity=".85"/>
+      <g transform="translate(18,58)">
+        <rect width="130" height="12" rx="2" fill="#fff"/>
+        <rect y="22" width="100" height="5" rx="2" fill="#fff" opacity=".55"/>
+        <rect y="34" width="80" height="5" rx="2" fill="#fff" opacity=".4"/>
+      </g>
+      <g transform="translate(160,52)">
+        <rect width="148" height="38" rx="6" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.28)"/>
+        <circle cx="20" cy="19" r="10" fill="${a}"/>
+        <rect x="38" y="13" width="60" height="6" rx="1" fill="#fff"/>
+        <rect x="38" y="22" width="84" height="4" rx="1" fill="#fff" opacity=".55"/>
+      </g>
+      <g transform="translate(160,96)">
+        <rect width="148" height="38" rx="6" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.28)"/>
+        <circle cx="20" cy="19" r="10" fill="${a}" opacity=".9"/>
+        <rect x="38" y="13" width="56" height="6" rx="1" fill="#fff"/>
+        <rect x="38" y="22" width="80" height="4" rx="1" fill="#fff" opacity=".5"/>
+      </g>
+      <g transform="translate(160,140)">
+        <rect width="148" height="38" rx="6" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.28)"/>
+        <circle cx="20" cy="19" r="10" fill="${a}" opacity=".8"/>
+        <rect x="38" y="13" width="64" height="6" rx="1" fill="#fff"/>
+        <rect x="38" y="22" width="76" height="4" rx="1" fill="#fff" opacity=".5"/>
+      </g>
+      <g transform="translate(18,128)">
+        <rect width="130" height="32" rx="16" fill="${a}"/>
+      </g>
+    </svg>`;
+  }
+
+  // 5. PROPERTY — header + 3 cards de imóveis
   if(L==='property'){
-    return `<svg viewBox="0 0 320 220" class="mock-svg">
-      <rect x="0" y="0" width="320" height="100" fill="${p}"/>
-      <rect x="0" y="0" width="320" height="28" fill="rgba(0,0,0,.3)"/>
-      <circle cx="20" cy="14" r="5" fill="${a}"/>
-      <rect x="36" y="8" width="60" height="10" rx="2" fill="#fff" opacity=".85"/>
-      <rect x="20" y="50" width="180" height="14" rx="3" fill="#fff"/>
-      <rect x="20" y="72" width="120" height="6" rx="2" fill="#fff" opacity=".6"/>
-      <g transform="translate(20,116)">
-        <rect width="86" height="92" rx="6" fill="${s}"/>
-        <rect width="86" height="60" rx="6" fill="rgba(255,255,255,.18)"/>
-        <text x="43" y="36" font-size="22" font-weight="800" fill="#fff" text-anchor="middle">${(m.name||'').charAt(0)}</text>
-        <rect x="10" y="68" width="60" height="5" rx="2" fill="#fff" opacity=".8"/>
-        <rect x="10" y="78" width="40" height="4" rx="2" fill="#fff" opacity=".5"/>
+    return `<svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" class="mock-svg">
+      <rect width="320" height="98" fill="${p}"/>
+      <rect width="320" height="28" fill="rgba(0,0,0,.32)"/>
+      <circle cx="18" cy="14" r="4" fill="${a}"/>
+      <rect x="30" y="9" width="54" height="9" rx="2" fill="#fff" opacity=".85"/>
+      <g transform="translate(20,48)">
+        <rect width="180" height="13" rx="2" fill="#fff"/>
+        <rect y="22" width="130" height="5" rx="2" fill="#fff" opacity=".55"/>
       </g>
-      <g transform="translate(116,116)">
-        <rect width="86" height="92" rx="6" fill="${s}" opacity=".9"/>
-        <rect width="86" height="60" rx="6" fill="rgba(255,255,255,.14)"/>
-        <text x="43" y="36" font-size="22" font-weight="800" fill="#fff" text-anchor="middle" opacity=".8">${(m.name||'?').charAt(1)||(m.name||'?').charAt(0)}</text>
-        <rect x="10" y="68" width="60" height="5" rx="2" fill="#fff" opacity=".7"/>
-        <rect x="10" y="78" width="40" height="4" rx="2" fill="#fff" opacity=".4"/>
+      <g transform="translate(232,40)">
+        <rect width="68" height="22" rx="11" fill="${a}"/>
       </g>
-      <g transform="translate(212,116)">
-        <rect width="86" height="92" rx="6" fill="${s}" opacity=".75"/>
-        <rect width="86" height="60" rx="6" fill="rgba(255,255,255,.1)"/>
-        <rect x="10" y="68" width="60" height="5" rx="2" fill="#fff" opacity=".5"/>
-        <rect x="10" y="78" width="40" height="4" rx="2" fill="#fff" opacity=".3"/>
+      <g transform="translate(16,116)">
+        <rect width="92" height="94" rx="6" fill="${s}"/>
+        <rect width="92" height="58" rx="6" fill="rgba(255,255,255,.15)"/>
+        <text x="46" y="38" font-size="22" font-weight="800" fill="#fff" text-anchor="middle" opacity=".85">${initial}</text>
+        <rect x="10" y="70" width="60" height="5" rx="2" fill="#fff" opacity=".8"/>
+        <rect x="10" y="80" width="40" height="4" rx="2" fill="#fff" opacity=".5"/>
+      </g>
+      <g transform="translate(114,118)">
+        <rect width="92" height="92" rx="6" fill="${s}" opacity=".88"/>
+        <rect width="92" height="56" rx="6" fill="rgba(255,255,255,.13)"/>
+        <text x="46" y="36" font-size="20" font-weight="800" fill="#fff" text-anchor="middle" opacity=".7">${initial}</text>
+        <rect x="10" y="68" width="56" height="5" rx="2" fill="#fff" opacity=".7"/>
+        <rect x="10" y="78" width="36" height="4" rx="2" fill="#fff" opacity=".4"/>
+      </g>
+      <g transform="translate(212,120)">
+        <rect width="92" height="90" rx="6" fill="${s}" opacity=".75"/>
+        <rect width="92" height="54" rx="6" fill="rgba(255,255,255,.1)"/>
+        <rect x="10" y="66" width="60" height="5" rx="2" fill="#fff" opacity=".55"/>
+        <rect x="10" y="76" width="40" height="4" rx="2" fill="#fff" opacity=".35"/>
       </g>
     </svg>`;
   }
+
+  // 6. PRODUCT — copy à esquerda, produto/placeholder à direita
   if(L==='product'){
-    return `<svg viewBox="0 0 320 220" class="mock-svg">
-      <rect x="0" y="0" width="320" height="220" fill="${p}"/>
-      <rect x="0" y="0" width="320" height="28" fill="rgba(0,0,0,.3)"/>
-      <circle cx="20" cy="14" r="5" fill="${a}"/>
-      <rect x="36" y="8" width="60" height="10" rx="2" fill="#fff" opacity=".85"/>
-      <rect x="20" y="60" width="160" height="14" rx="3" fill="#fff"/>
-      <rect x="20" y="86" width="120" height="22" rx="4" fill="${a}"/>
-      <rect x="200" y="40" width="100" height="160" rx="8" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.25)"/>
-      <text x="250" y="135" font-size="64" font-weight="800" fill="#fff" opacity=".65" text-anchor="middle">★</text>
+    return `<svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" class="mock-svg">
+      <rect width="320" height="220" fill="${p}"/>
+      <rect width="320" height="28" fill="rgba(0,0,0,.32)"/>
+      <circle cx="18" cy="14" r="4" fill="${a}"/>
+      <rect x="30" y="9" width="54" height="9" rx="2" fill="#fff" opacity=".85"/>
+      <g transform="translate(20,62)">
+        <rect width="160" height="13" rx="2" fill="#fff"/>
+        <rect y="22" width="120" height="5" rx="2" fill="#fff" opacity=".55"/>
+        <rect y="34" width="90" height="5" rx="2" fill="#fff" opacity=".4"/>
+      </g>
+      <g transform="translate(20,118)">
+        <rect width="86" height="24" rx="4" fill="${a}"/>
+      </g>
+      <g transform="translate(116,118)">
+        <rect width="62" height="24" rx="12" fill="none" stroke="#fff" stroke-width="1.4"/>
+      </g>
+      <g transform="translate(200,40)">
+        <rect width="104" height="160" rx="10" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.28)"/>
+        <circle cx="52" cy="62" r="20" fill="${a}" opacity=".85"/>
+        <rect x="22" y="92" width="64" height="6" rx="2" fill="#fff" opacity=".7"/>
+        <rect x="32" y="104" width="44" height="4" rx="2" fill="#fff" opacity=".5"/>
+        <rect x="32" y="120" width="40" height="4" rx="2" fill="#fff" opacity=".4"/>
+      </g>
     </svg>`;
   }
+
+  // 7. GALLERY — polaroids para fotógrafo
   if(L==='gallery'){
-    return `<svg viewBox="0 0 320 220" class="mock-svg">
-      <rect x="0" y="0" width="320" height="120" fill="${p}"/>
-      <rect x="0" y="0" width="320" height="28" fill="rgba(0,0,0,.3)"/>
-      <circle cx="20" cy="14" r="5" fill="${a}"/>
-      <rect x="36" y="8" width="60" height="10" rx="2" fill="#fff" opacity=".85"/>
-      <text x="20" y="68" font-size="18" font-weight="800" fill="#fff">${esc(m.name)}</text>
-      <g transform="translate(20,134)" font-family="Inter" font-size="6" fill="#666">
-        <g transform="rotate(-3 40 40)">
-          <rect width="64" height="68" fill="#fff"/>
-          <rect x="2" y="2" width="60" height="54" fill="${s}"/>
-          <text x="32" y="63" text-anchor="middle">ensaio</text>
+    return `<svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" class="mock-svg">
+      <rect width="320" height="220" fill="#0a0a0a"/>
+      <rect width="320" height="28" fill="rgba(255,255,255,.06)"/>
+      <circle cx="18" cy="14" r="4" fill="${a}"/>
+      <rect x="30" y="9" width="54" height="9" rx="2" fill="#fff" opacity=".85"/>
+      <text x="20" y="62" font-size="17" font-weight="800" fill="#fff">${esc(m.name)}</text>
+      <rect x="20" y="72" width="100" height="5" rx="2" fill="${a}"/>
+      <g font-family="Inter" font-size="6" fill="#666">
+        <g transform="rotate(-4 40 160) translate(8,124)">
+          <rect width="62" height="70" fill="#fff"/>
+          <rect x="4" y="4" width="54" height="52" fill="${s}"/>
+          <text x="31" y="64" text-anchor="middle">ensaio</text>
         </g>
-        <g transform="translate(76,4) rotate(2 40 40)">
-          <rect width="64" height="68" fill="#fff"/>
-          <rect x="2" y="2" width="60" height="54" fill="${s}" opacity=".85"/>
-          <text x="32" y="63" text-anchor="middle">casamento</text>
+        <g transform="rotate(2 130 160) translate(94,118)">
+          <rect width="62" height="70" fill="#fff"/>
+          <rect x="4" y="4" width="54" height="52" fill="${s}" opacity=".85"/>
+          <text x="31" y="64" text-anchor="middle">casamento</text>
         </g>
-        <g transform="translate(132,-2) rotate(-1 40 40)">
-          <rect width="64" height="68" fill="#fff"/>
-          <rect x="2" y="2" width="60" height="54" fill="${s}" opacity=".7"/>
-          <text x="32" y="63" text-anchor="middle">marca</text>
+        <g transform="rotate(-1 200 160) translate(170,124)">
+          <rect width="62" height="70" fill="#fff"/>
+          <rect x="4" y="4" width="54" height="52" fill="${s}" opacity=".7"/>
+          <text x="31" y="64" text-anchor="middle">marca</text>
         </g>
-        <g transform="translate(188,8) rotate(3 40 40)">
-          <rect width="64" height="68" fill="#fff"/>
-          <rect x="2" y="2" width="60" height="54" fill="${s}" opacity=".55"/>
-          <text x="32" y="63" text-anchor="middle">evento</text>
+        <g transform="rotate(3 270 160) translate(248,120)">
+          <rect width="62" height="70" fill="#fff"/>
+          <rect x="4" y="4" width="54" height="52" fill="${s}" opacity=".55"/>
+          <text x="31" y="64" text-anchor="middle">evento</text>
         </g>
       </g>
     </svg>`;
   }
+
+  // 8. MENU — cardápio para restaurante
   if(L==='menu'){
-    return `<svg viewBox="0 0 320 220" class="mock-svg">
-      <rect x="0" y="0" width="320" height="220" fill="${p}"/>
-      <rect x="0" y="0" width="320" height="36" fill="rgba(0,0,0,.3)"/>
-      <circle cx="20" cy="18" r="5" fill="${a}"/>
-      <rect x="36" y="12" width="60" height="10" rx="2" fill="#fff" opacity=".85"/>
-      <text x="160" y="78" font-size="22" font-weight="800" fill="#fff" text-anchor="middle">${esc((m.name||''))}</text>
-      <text x="160" y="96" font-size="9" fill="${a}" text-anchor="middle">★ ★ ★</text>
-      <g font-size="8" fill="rgba(255,255,255,.9)" font-family="Inter">
-        <line x1="30" y1="124" x2="290" y2="124" stroke="rgba(255,255,255,.4)" stroke-width="0.5" stroke-dasharray="2,2"/>
-        <text x="32" y="118" font-weight="700">Entrada</text>
-        <line x1="30" y1="148" x2="290" y2="148" stroke="rgba(255,255,255,.4)" stroke-width="0.5" stroke-dasharray="2,2"/>
-        <text x="32" y="142" font-weight="700">Principal</text>
-        <line x1="30" y1="172" x2="290" y2="172" stroke="rgba(255,255,255,.4)" stroke-width="0.5" stroke-dasharray="2,2"/>
+    return `<svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" class="mock-svg">
+      <rect width="320" height="220" fill="${p}"/>
+      <rect width="320" height="34" fill="rgba(0,0,0,.3)"/>
+      <circle cx="18" cy="17" r="4" fill="${a}"/>
+      <rect x="30" y="12" width="54" height="9" rx="2" fill="#fff" opacity=".85"/>
+      <text x="160" y="76" font-size="20" font-weight="800" fill="#fff" text-anchor="middle" font-family="Georgia,serif">${esc(m.name)}</text>
+      <text x="160" y="94" font-size="9" fill="${a}" text-anchor="middle">★ ★ ★</text>
+      <g font-family="Georgia,serif" font-size="9" fill="rgba(255,255,255,.92)">
+        <line x1="30" y1="120" x2="290" y2="120" stroke="rgba(255,255,255,.4)" stroke-width="0.5"/>
+        <text x="32" y="114" font-weight="700">Entrada</text>
+        <line x1="30" y1="146" x2="290" y2="146" stroke="rgba(255,255,255,.4)" stroke-width="0.5"/>
+        <text x="32" y="140" font-weight="700">Principal</text>
+        <line x1="30" y1="172" x2="290" y2="172" stroke="rgba(255,255,255,.4)" stroke-width="0.5"/>
         <text x="32" y="166" font-weight="700">Sobremesa</text>
-        <line x1="30" y1="196" x2="290" y2="196" stroke="rgba(255,255,255,.4)" stroke-width="0.5" stroke-dasharray="2,2"/>
-        <text x="32" y="190" font-weight="700">Bebidas</text>
+        <line x1="30" y1="198" x2="290" y2="198" stroke="rgba(255,255,255,.4)" stroke-width="0.5"/>
+        <text x="32" y="192" font-weight="700">Bebidas</text>
       </g>
     </svg>`;
   }
+
+  // 9. SPLIT-BOLD — oferta com botão grande
   if(L==='split-bold'){
-    return `<svg viewBox="0 0 320 220" class="mock-svg">
-      <rect x="0" y="0" width="320" height="220" fill="${p}"/>
-      <rect x="0" y="0" width="320" height="40" fill="${s}"/>
-      <circle cx="20" cy="20" r="6" fill="${a}"/>
-      <rect x="40" y="16" width="60" height="8" rx="2" fill="#fff" opacity=".9"/>
+    return `<svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" class="mock-svg">
+      <rect width="320" height="220" fill="${p}"/>
+      <rect width="320" height="36" fill="${s}"/>
+      <circle cx="18" cy="18" r="5" fill="${a}"/>
+      <rect x="32" y="14" width="58" height="9" rx="2" fill="#fff" opacity=".9"/>
+      <rect x="220" y="14" width="80" height="9" rx="4" fill="${a}"/>
       <g transform="translate(20,72)">
-        <rect width="100%" height="6" rx="2" fill="rgba(255,255,255,.4)"/>
-        <rect y="14" width="80%" height="6" rx="2" fill="rgba(255,255,255,.3)"/>
+        <rect width="180" height="14" rx="3" fill="#fff"/>
+        <rect y="24" width="140" height="6" rx="2" fill="#fff" opacity=".55"/>
+        <rect y="38" width="110" height="6" rx="2" fill="#fff" opacity=".4"/>
       </g>
-      <g transform="translate(20,108)">
-        <rect width="170" height="20" rx="4" fill="#fff"/>
+      <g transform="translate(20,128)">
+        <rect width="92" height="28" rx="14" fill="${a}"/>
+        <text x="46" y="18" font-size="11" font-weight="800" fill="${p}" text-anchor="middle">GARANTIR</text>
       </g>
-      <rect x="20" y="138" width="80" height="26" rx="13" fill="${a}"/>
-      <text x="60" y="156" font-size="11" font-weight="800" fill="${p}" text-anchor="middle">GARANTIR</text>
-      <rect x="110" y="138" width="40" height="26" rx="13" fill="none" stroke="#fff" stroke-width="1.5"/>
-      <text x="130" y="156" font-size="9" fill="#fff" text-anchor="middle">info</text>
-      <g transform="translate(220,72)">
-        <rect width="86" height="80" rx="8" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.3)"/>
-        <text x="43" y="50" font-size="34" font-weight="800" fill="${a}" text-anchor="middle">!</text>
+      <g transform="translate(120,128)">
+        <rect width="48" height="28" rx="14" fill="none" stroke="#fff" stroke-width="1.6"/>
+        <text x="24" y="18" font-size="9" fill="#fff" text-anchor="middle">info</text>
+      </g>
+      <g transform="translate(218,72)">
+        <rect width="86" height="84" rx="10" fill="rgba(255,255,255,.16)" stroke="rgba(255,255,255,.32)" stroke-width="1"/>
+        <text x="43" y="56" font-size="40" font-weight="800" fill="${a}" text-anchor="middle">!</text>
       </g>
     </svg>`;
   }
+
   // fallback split
   return modelMockSVG(Object.assign({},m,{mockLayout:'split'}));
 }
@@ -970,14 +1180,29 @@ function useModel(id){
   const m=MODELS.find(x=>x.id===id);if(!m)return;
   const preset = (typeof MODEL_PRESETS!=='undefined' && MODEL_PRESETS[id])||{};
   const seg = preset.segment||m.desc.split(' ')[0]||'';
+  const city = preset.city||'';
+  const company = preset.company||'';
+  const suggestedName = company ? `Site ${company}` : `Projeto ${m.name}`;
   STATE.currentProject={
-    id:uid(),name:'Projeto '+m.name,client:'',company:'',segment:seg,city:'',
-    modelId:id,templateId:MODEL_TO_TEMPLATE[id]||'empresa-corporativa',
-    status:'draft',createdAt:Date.now(),data:defaultData('','',seg,''),versions:[]
+    id:uid(),
+    name:suggestedName,
+    client:'',
+    company:company,
+    segment:seg,
+    city:city,
+    modelId:id,
+    templateId:MODEL_TO_TEMPLATE[id]||'empresa-corporativa',
+    status:'draft',
+    createdAt:Date.now(),
+    data:defaultData(company,'',seg,city),
+    versions:[]
   };
   // Aplica preset ANTES do template default (preset é mais rico)
   applyModelPreset(STATE.currentProject, id);
   applyTemplateDefaults(STATE.currentProject);
+  // Garante que o company foi setado (caso defaultData tenha retornado sem)
+  if(!STATE.currentProject.data.company && preset.company) STATE.currentProject.data.company = preset.company;
+  if(!STATE.currentProject.data.trade) STATE.currentProject.data.trade = STATE.currentProject.data.company;
   STATE.page='editor';render();
 }
 function applyTemplateDefaults(p){

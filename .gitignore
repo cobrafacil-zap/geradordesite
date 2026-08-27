@@ -36,3 +36,5 @@ out/
 # Test artefacts
 /tmp_export_test/
 coverage/
+.vercel
+.env*

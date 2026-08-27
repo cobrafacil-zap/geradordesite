@@ -5,11 +5,13 @@
 // MODEL_PRESETS — copy distinto por modelo (slogan, about, serviços, etc.)
 // São templates editáveis do segmento — não inventam números/certificações.
 // Cada modelo ganha um heroStyle (A..G) que o site-generator usa para escolher layout.
+// `company` é um nome sugerido para o usuário editar — nunca fica vazio.
 const MODEL_PRESETS = {
   'corporate':{
+    company:'Grupo Sólida',
     slogan:'Estrutura sólida para empresas que pensam no longo prazo',
     about:'Atuamos com metodologia, governança e processos maduros para entregar resultados consistentes em cada projeto.',
-    segment:'Empresarial',
+    segment:'Empresarial',city:'São Paulo',state:'SP',
     heroStyle:'A',
     services:[
       {name:'Consultoria Estratégica',desc:'Diagnóstico e plano de ação sob medida para o seu negócio.'},
@@ -27,9 +29,10 @@ const MODEL_PRESETS = {
     ],
   },
   'modern':{
+    company:'Nexus Digital',
     slogan:'Tecnologia que move o seu negócio para frente',
     about:'Combinamos estratégia, design e engenharia para construir produtos digitais que geram resultado mensurável.',
-    segment:'Tecnologia',
+    segment:'Tecnologia',city:'Florianópolis',state:'SC',
     heroStyle:'C',
     services:[
       {name:'Software Sob Medida',desc:'Aplicações web, mobile e integrações sob medida.'},
@@ -47,9 +50,10 @@ const MODEL_PRESETS = {
     ],
   },
   'premium':{
+    company:'Maison Réserve',
     slogan:'Experiências de alto padrão para clientes seletos',
     about:'Cada detalhe é desenhado para refletir exclusividade, sofisticação e a identidade do cliente.',
-    segment:'Premium',
+    segment:'Premium',city:'São Paulo',state:'SP',
     heroStyle:'B',
     services:[
       {name:'Atendimento Concierge',desc:'Acompanhamento dedicado e personalizado.'},
@@ -66,9 +70,10 @@ const MODEL_PRESETS = {
     ],
   },
   'minimal':{
+    company:'Estúdio Linha',
     slogan:'Menos é mais. Design que comunica com clareza',
     about:'Projetos limpos, funcionais e sem ruído. Cada elemento tem um propósito claro.',
-    segment:'Design',
+    segment:'Design',city:'Curitiba',state:'PR',
     heroStyle:'B',
     services:[
       {name:'Branding',desc:'Identidade visual simples, memorável e aplicável.'},
@@ -85,9 +90,10 @@ const MODEL_PRESETS = {
     ],
   },
   'local':{
+    company:'Empório da Vila',
     slogan:'O negócio da sua região com cara de cidade grande',
     about:'Negócios locais com atendimento próximo, agilidade e o profissionalismo que o cliente merece.',
-    segment:'Comércio Local',
+    segment:'Comércio Local',city:'Campinas',state:'SP',
     heroStyle:'E',
     services:[
       {name:'Atendimento Presencial',desc:'Loja física com equipe pronta para atender e tirar dúvidas.'},
@@ -104,9 +110,10 @@ const MODEL_PRESETS = {
     ],
   },
   'construction':{
+    company:'Construtora Alicerce',
     slogan:'Da fundação ao acabamento, com qualidade',
     about:'Construção, reforma e arquitetura com equipe própria, cronograma cumprido e acabamento impecável.',
-    segment:'Construção',
+    segment:'Construção',city:'Belo Horizonte',state:'MG',
     heroStyle:'A',
     services:[
       {name:'Construção Civil',desc:'Obras residenciais e comerciais completas, do zero à entrega.'},
@@ -123,9 +130,10 @@ const MODEL_PRESETS = {
     ],
   },
   'clinic':{
+    company:'Clínica Vida Plena',
     slogan:'Cuidar de pessoas é a nossa especialidade',
     about:'Atendimento humanizado em saúde, com estrutura completa e profissionais especializados.',
-    segment:'Saúde',
+    segment:'Saúde',city:'Rio de Janeiro',state:'RJ',
     heroStyle:'B',
     services:[
       {name:'Consultas Especializadas',desc:'Profissionais com formação e experiência comprovadas.'},
@@ -142,9 +150,10 @@ const MODEL_PRESETS = {
     ],
   },
   'realestate':{
+    company:'Imobiliária Raiz',
     slogan:'O imóvel perfeito está mais perto do que você imagina',
     about:'Acompanhamos você em todas as etapas da compra, venda ou aluguel do seu imóvel.',
-    segment:'Imóveis',
+    segment:'Imóveis',city:'São Paulo',state:'SP',
     heroStyle:'F',
     services:[
       {name:'Compra e Venda',desc:'Assessoria completa do início ao fim da transação.'},
@@ -161,9 +170,10 @@ const MODEL_PRESETS = {
     ],
   },
   'services':{
+    company:'ServMais Soluções',
     slogan:'Soluções completas para sua casa e empresa',
     about:'Profissionais certificados para resolver desde a manutenção do dia a dia até projetos maiores.',
-    segment:'Serviços',
+    segment:'Serviços',city:'Niterói',state:'RJ',
     heroStyle:'E',
     services:[
       {name:'Manutenção Predial',desc:'Reparos gerais com equipe própria.'},
@@ -180,9 +190,10 @@ const MODEL_PRESETS = {
     ],
   },
   'electrician':{
+    company:'Elétrica Volt Amper',
     slogan:'Energia segura, instalação profissional',
     about:'Serviços elétricos residenciais e comerciais com normas técnicas e equipe certificada.',
-    segment:'Eletricidade',
+    segment:'Eletricidade',city:'Curitiba',state:'PR',
     heroStyle:'A',
     services:[
       {name:'Instalações Elétricas',desc:'Projetos novos, com padrões e normas técnicas.'},
@@ -199,9 +210,10 @@ const MODEL_PRESETS = {
     ],
   },
   'plumber':{
+    company:'Hidro Pró Encanamentos',
     slogan:'Hidráulica sem dor de cabeça, do reparo à reforma',
     about:'Soluções hidráulicas residenciais e comerciais com diagnóstico claro antes de qualquer serviço.',
-    segment:'Encanamento',
+    segment:'Encanamento',city:'Porto Alegre',state:'RS',
     heroStyle:'A',
     services:[
       {name:'Desentupimento',desc:'Pias, ralos, vasos e colunas com equipamento profissional.'},
@@ -218,9 +230,10 @@ const MODEL_PRESETS = {
     ],
   },
   'mechanic':{
+    company:'Auto Center Confiança',
     slogan:'Seu carro nas mãos certas — diagnóstico honesto',
     about:'Oficina mecânica com diagnóstico detalhado, orçamento claro e peças de procedência.',
-    segment:'Automotivo',
+    segment:'Automotivo',city:'São Paulo',state:'SP',
     heroStyle:'A',
     services:[
       {name:'Revisão Periódica',desc:'Troca de óleo, filtros, fluidos e checagem geral.'},
@@ -237,9 +250,10 @@ const MODEL_PRESETS = {
     ],
   },
   'techassist':{
+    company:'Fix Cel & Cia',
     slogan:'Conserto rápido com garantia para seus equipamentos',
     about:'Assistência técnica especializada em celulares, notebooks e eletrodomésticos.',
-    segment:'Reparos',
+    segment:'Reparos',city:'Recife',state:'PE',
     heroStyle:'E',
     services:[
       {name:'Celulares',desc:'Troca de tela, bateria, conectores e software.'},
@@ -256,9 +270,10 @@ const MODEL_PRESETS = {
     ],
   },
   'cleaning':{
+    company:'Brilho Já Limpeza',
     slogan:'Imóvel impecável, atendimento pontual',
     about:'Limpeza residencial e comercial com equipe treinada, produtos profissionais e agendamento flexível.',
-    segment:'Limpeza',
+    segment:'Limpeza',city:'Goiânia',state:'GO',
     heroStyle:'A',
     services:[
       {name:'Limpeza Residencial',desc:'Faxina completa com atendimento semanal, quinzenal ou mensal.'},
@@ -275,9 +290,10 @@ const MODEL_PRESETS = {
     ],
   },
   'agency':{
+    company:'Agência Faísca',
     slogan:'Criatividade com estratégia que converte',
     about:'Agência criativa focada em resultado. Briefing afiado, conceito forte e entrega no prazo.',
-    segment:'Agência',
+    segment:'Agência',city:'São Paulo',state:'SP',
     heroStyle:'C',
     services:[
       {name:'Campanhas Integradas',desc:'Mídia, conteúdo e performance trabalhando juntos.'},
@@ -294,9 +310,10 @@ const MODEL_PRESETS = {
     ],
   },
   'photographer':{
+    company:'Estúdio Enquadro',
     slogan:'Cada clique conta uma história',
     about:'Fotografia autoral para ensaios, casamentos, marcas e eventos.',
-    segment:'Fotografia',
+    segment:'Fotografia',city:'Florianópolis',state:'SC',
     heroStyle:'G',
     services:[
       {name:'Ensaio Pessoal',desc:'Retratos em estúdio ou locação, com direção de arte.'},
@@ -313,9 +330,10 @@ const MODEL_PRESETS = {
     ],
   },
   'lp-product':{
+    company:'Produto Aurora',
     slogan:'O produto que faltava para o seu dia a dia',
     about:'Landing page focada em conversão. Um produto, uma decisão, um botão.',
-    segment:'E-commerce',
+    segment:'E-commerce',city:'São Paulo',state:'SP',
     heroStyle:'D',
     services:[
       {name:'Produto em Destaque',desc:'Apresentação visual completa com benefícios e garantias.'},
@@ -332,9 +350,10 @@ const MODEL_PRESETS = {
     ],
   },
   'offer':{
+    company:'Oferta Relâmpago',
     slogan:'Oferta por tempo limitado. Garanta a sua',
     about:'Página de oferta com contagem regressiva, escassez e CTA único. Foco em conversão rápida.',
-    segment:'Vendas',
+    segment:'Vendas',city:'Brasília',state:'DF',
     heroStyle:'A',
     services:[
       {name:'Oferta Completa',desc:'Bônus, garantia e preço destacado.'},
@@ -351,9 +370,10 @@ const MODEL_PRESETS = {
     ],
   },
   'sales':{
+    company:'Loja Central',
     slogan:'Tudo o que você precisa em um só lugar',
     about:'Página de vendas com vitrine ampla, blocos de benefícios e funil claro do clique à compra.',
-    segment:'Loja',
+    segment:'Loja',city:'São Paulo',state:'SP',
     heroStyle:'D',
     services:[
       {name:'Vitrine Completa',desc:'Catálogo organizado por categorias.'},
@@ -370,9 +390,10 @@ const MODEL_PRESETS = {
     ],
   },
   'premium-prod':{
+    company:'Coleção Atelier',
     slogan:'Produto premium para quem exige o melhor',
     about:'Apresentação sofisticada para produtos de alto valor agregado. Detalhes, especificação e curadoria.',
-    segment:'Premium',
+    segment:'Premium',city:'São Paulo',state:'SP',
     heroStyle:'B',
     services:[
       {name:'Página Premium',desc:'Design minimalista e detalhado.'},
@@ -389,9 +410,10 @@ const MODEL_PRESETS = {
     ],
   },
   'catalog':{
+    company:'Catálogo Geral',
     slogan:'Catálogo completo para escolher com calma',
     about:'Catálogo extenso de produtos com filtros, busca e categorias bem definidas.',
-    segment:'Catálogo',
+    segment:'Catálogo',city:'São Paulo',state:'SP',
     heroStyle:'D',
     services:[
       {name:'Catálogo por Categoria',desc:'Organização clara com filtros laterais.'},
@@ -408,9 +430,10 @@ const MODEL_PRESETS = {
     ],
   },
   'local-prod':{
+    company:'Sabor da Roça',
     slogan:'Da nossa região para a sua casa',
     about:'Produtos locais com identidade regional, produção artesanal e procedência rastreada.',
-    segment:'Regional',
+    segment:'Regional',city:'Vitória',state:'ES',
     heroStyle:'A',
     services:[
       {name:'Produção Local',desc:'Feito em pequenas tiragens na nossa região.'},
@@ -427,9 +450,10 @@ const MODEL_PRESETS = {
     ],
   },
   'lawyer':{
+    company:'Advocacia Pires & Associados',
     slogan:'Defesa técnica com transparência total',
     about:'Escritório de advocacia com atendimento reservado e estratégia clara para cada caso.',
-    segment:'Advocacia',
+    segment:'Advocacia',city:'São Paulo',state:'SP',
     heroStyle:'A',
     services:[
       {name:'Direito Civil',desc:'Contratos, família, consumidor e responsabilidade civil.'},
@@ -446,9 +470,10 @@ const MODEL_PRESETS = {
     ],
   },
   'accountant':{
+    company:'Contábil Prime',
     slogan:'Contabilidade sem complicação, decisão com clareza',
     about:'Escritório contábil com atendimento próximo, obrigações em dia e relatórios que fazem sentido.',
-    segment:'Contábil',
+    segment:'Contábil',city:'Curitiba',state:'PR',
     heroStyle:'B',
     services:[
       {name:'Contabilidade Mensal',desc:'Escrituração, impostos e obrigações fiscais.'},
@@ -465,9 +490,10 @@ const MODEL_PRESETS = {
     ],
   },
   'broker':{
+    company:'Corretor Carlos Andrade',
     slogan:'O corretor que entende o que você procura',
     about:'Corretor de imóveis com carteira CRECI, atendimento personalizado e curadoria de regiões.',
-    segment:'Corretagem',
+    segment:'Corretagem',city:'Florianópolis',state:'SC',
     heroStyle:'F',
     services:[
       {name:'Compra Assistida',desc:'Acompanhamento em toda a jornada, da escolha ao registro.'},
@@ -484,9 +510,10 @@ const MODEL_PRESETS = {
     ],
   },
   'trainer':{
+    company:'Personal Trainer Renato Silva',
     slogan:'Treino personalizado, resultado real',
     about:'Personal trainer com avaliação física, plano periodizado e acompanhamento semanal.',
-    segment:'Fitness',
+    segment:'Fitness',city:'São Paulo',state:'SP',
     heroStyle:'A',
     services:[
       {name:'Avaliação Física',desc:'Composição, força, mobilidade e cardio.'},
@@ -503,9 +530,10 @@ const MODEL_PRESETS = {
     ],
   },
   'consultant':{
+    company:'Consultoria Rumo Certo',
     slogan:'Diagnóstico claro, plano sob medida',
     about:'Consultoria empresarial com diagnóstico claro, plano executável e acompanhamento de marcos.',
-    segment:'Consultoria',
+    segment:'Consultoria',city:'Rio de Janeiro',state:'RJ',
     heroStyle:'C',
     services:[
       {name:'Diagnóstico',desc:'Mapeamento de processos, gargalos e oportunidades.'},
@@ -522,9 +550,10 @@ const MODEL_PRESETS = {
     ],
   },
   'autonomo':{
+    company:'Profissional Especializado',
     slogan:'Atendimento pessoal, profissional e direto',
     about:'Profissional autônomo com agenda flexível, atendimento personalizado e orçamento claro.',
-    segment:'Autônomo',
+    segment:'Autônomo',city:'Sua cidade',state:'SP',
     heroStyle:'A',
     services:[
       {name:'Atendimento Personalizado',desc:'Trabalho direto com o profissional, sem intermediários.'},

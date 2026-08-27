@@ -732,7 +732,7 @@ section{padding:90px 0}
 
 /* ABOUT */
 .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
-.about-img{aspect-ratio:1;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:140px;font-weight:700}
+.about-img{aspect-ratio:1;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:88px;font-weight:700;letter-spacing:0;max-width:280px;margin:0 auto}
 
 /* CTA BAND */
 .cta-band{background:linear-gradient(135deg,var(--accent),var(--primary));padding:72px 0;color:#fff;text-align:center}
