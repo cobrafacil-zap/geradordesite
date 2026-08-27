@@ -55,16 +55,48 @@ export default function EditorPage() {
     try {
       const res = await fetch(`/api/projects/${projectId}`);
       const data = await res.json();
+      // Modo dev sem Supabase → carrega schema de localStorage
+      if (!res.ok || data.error) {
+        if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem(`gerador:project:${projectId}`);
+          if (cached) {
+            try {
+              const s = JSON.parse(cached);
+              setSchema(s);
+              setOriginal(JSON.stringify(s));
+              if (autostart) startGeneration();
+              return;
+            } catch {}
+          }
+        }
+        setSchema(null);
+        return;
+      }
       if (data.project?.project_versions?.schema_json) {
         const s = data.project.project_versions.schema_json;
         setSchema(s);
         setOriginal(JSON.stringify(s));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`gerador:project:${projectId}`, JSON.stringify(s));
+        }
         if (autostart) startGeneration();
       } else {
         setSchema(null);
       }
     } catch (e) {
       console.error(e);
+      // Fallback localStorage
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(`gerador:project:${projectId}`);
+        if (cached) {
+          try {
+            const s = JSON.parse(cached);
+            setSchema(s);
+            setOriginal(JSON.stringify(s));
+            return;
+          } catch {}
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -88,12 +120,23 @@ export default function EditorPage() {
   async function doSave(s: any) {
     setSaving(true);
     try {
-      await fetch(`/api/projects/${projectId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schema: s }),
-      });
-      setSavedAt(new Date());
+      // 1) Sempre salva em localStorage como fallback (funciona mesmo sem Supabase)
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`gerador:project:${projectId}`, JSON.stringify(s));
+        } catch {}
+      }
+      // 2) Tenta persistir no Supabase (silencioso se falhar)
+      try {
+        const res = await fetch(`/api/projects/${projectId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schema: s }),
+        });
+        if (res.ok) {
+          setSavedAt(new Date());
+        }
+      } catch {}
     } finally {
       setSaving(false);
     }
