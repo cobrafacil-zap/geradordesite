@@ -1,0 +1,14 @@
+{
+  "name": "gerador-de-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fábrica de Sites — plataforma comercial para criar sites completos durante calls de vendas",
+  "scripts": {
+    "dev": "python3 -m http.server 8000 --directory gerador",
+    "start": "python3 -m http.server 8000 --directory gerador"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["gerador", "sites", "vendas", "nextjs", "static", "factory"]
+}
