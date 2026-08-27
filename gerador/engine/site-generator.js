@@ -41,11 +41,11 @@ const SiteGenerator = (()=>{
   function buildProjectContent(project){
     const d=project.data;
     return {
-      company:{name:d.company||'Sua Empresa',trade:d.trade||d.company||'Sua Empresa',slogan:d.slogan||'',segment:d.segment||'',city:d.city||'',state:d.state||''},
+      company:{name:d.company||'Sua Empresa',trade:d.trade||d.company||'Sua Empresa',slogan:d.slogan||'',segment:d.segment||'',city:d.city||'',state:d.state||'',heroStyle:d.heroStyle||'A',heroImage:d.image||null},
       contact:{whatsapp:d.whatsapp,phone:d.phone,email:d.email,address:d.address,instagram:d.instagram,facebook:d.facebook,whatsappMessage:d.whatsappMessage||'Olá, gostaria de saber mais.'},
       about:d.about||'',
       services:(d.services||[]).map(s=>({name:s.name,desc:s.desc,icon:s.icon||'✓',slug:slugify(s.name)})),
-      differentials:(d.differentials||[]).map(x=>({title:x.title,desc:x.desc})),
+      differentials:(d.differentials||[]).map(x=>({title:x.title,desc:x.desc,name:x.title,desc2:x.desc})),
       team:d.team||[],
       testimonials:(d.testimonials||[]).filter(t=>t.name&&t.text),
       products:(d.products||[]).map(p=>({name:p.name,desc:p.desc,price:p.price||'',slug:slugify(p.name)})),
@@ -158,8 +158,9 @@ const SiteGenerator = (()=>{
     return renderHeroA(project,theme,content,wa,logoImg);
   }
 
-  // A — split (default): logo+avatar à direita, copy+CTA à esquerda
+  // A — split (default): imagem à direita, copy+CTA à esquerda
   function renderHeroA(project,theme,content,wa,logoImg){
+    const heroImg = content.company.heroImage;
     return `<section class="hero hero-a">
       <div class="wrap hero-grid">
         <div>
@@ -171,14 +172,16 @@ const SiteGenerator = (()=>{
             <a href="#sobre" class="btn btn-s">${esc(content.cta.secondary)}</a>
           </div>
         </div>
-        <div class="hero-img">${logoImg?`<img src="${logoImg}" alt="logo">`:esc((content.company.trade||'★').charAt(0).toUpperCase())}</div>
+        <div class="hero-img">${heroImg?`<img src="${esc(heroImg)}" alt="${esc(content.company.trade)}" loading="lazy">`:logoImg?`<img src="${logoImg}" alt="logo">`:esc((content.company.trade||'★').charAt(0).toUpperCase())}</div>
       </div>
     </section>`;
   }
 
-  // B — centrado com gradiente: copy no centro, fundo em gradiente
+  // B — centrado com gradiente: copy no centro, imagem de fundo desfocada
   function renderHeroB(project,theme,content,wa,logoImg){
-    return `<section class="hero hero-b">
+    const heroImg = content.company.heroImage;
+    const bgStyle = heroImg?`background-image:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.6)),url('${esc(heroImg)}');background-size:cover;background-position:center;color:#fff;`:'';
+    return `<section class="hero hero-b" style="${bgStyle}">
       <div class="wrap hero-center">
         <div class="pill pill-center">${esc(content.company.segment||'Excelência')}${content.company.city?' · '+esc(content.company.city):''}</div>
         <h1>${esc(content.company.slogan||'Soluções profissionais para o seu negócio')}</h1>
@@ -206,12 +209,13 @@ const SiteGenerator = (()=>{
     </section>`;
   }
 
-  // D — product spotlight: produto grande à esquerda (placeholder), descrição à direita
+  // D — product spotlight: produto grande à esquerda (imagem real), descrição à direita
   function renderHeroD(project,theme,content,wa,logoImg){
+    const heroImg = content.company.heroImage;
     return `<section class="hero hero-d">
       <div class="wrap hero-grid">
         <div class="hero-img product-spot">
-          <div class="product-img-placeholder">${logoImg?`<img src="${logoImg}" alt="logo">`:esc((content.company.trade||'★').slice(0,3).toUpperCase())}</div>
+          <div class="product-img-placeholder">${heroImg?`<img src="${esc(heroImg)}" alt="${esc(content.company.trade)}" loading="lazy">`:logoImg?`<img src="${logoImg}" alt="logo">`:esc((content.company.trade||'★').slice(0,3).toUpperCase())}</div>
         </div>
         <div>
           <div class="pill">${esc(content.company.segment||'Produto')}</div>
@@ -240,10 +244,15 @@ const SiteGenerator = (()=>{
     </section>`;
   }
 
-  // F — property/menu showcase: vitrine de cards
+  // F — property/menu showcase: vitrine de cards (com imagem real)
   function renderHeroF(project,theme,content,wa,logoImg){
+    const heroImg = content.company.heroImage;
     const items = (content.services&&content.services.length?content.services:content.differentials||[]).slice(0,3);
-    const cards = items.map(it=>`<div class="hero-prop-card"><div class="hero-prop-img">${esc((it.name||'').charAt(0).toUpperCase())}</div><h3>${esc(it.name)}</h3><p>${esc(it.desc)}</p></div>`).join('');
+    const cards = items.map((it,i)=>{
+      // usa heroImg para o primeiro card, e gradient para os demais (diversidade visual)
+      const cardImg = i===0&&heroImg ? `<img src="${esc(heroImg)}" alt="">` : '';
+      return `<div class="hero-prop-card"><div class="hero-prop-img">${cardImg||esc((it.name||'').charAt(0).toUpperCase())}</div><h3>${esc(it.name)}</h3><p>${esc(it.desc)}</p></div>`;
+    }).join('');
     return `<section class="hero hero-f">
       <div class="wrap">
         <div class="pill pill-center">${esc(content.company.segment||'Destaques')}${content.company.city?' · '+esc(content.company.city):''}</div>
@@ -281,9 +290,10 @@ const SiteGenerator = (()=>{
   }
 
   function renderAbout(project,theme,content){
+    const heroImg = content.company.heroImage;
     return `<section class="alt" id="sobre">
       <div class="wrap about-grid">
-        <div class="about-img">${esc((content.company.trade||'★').charAt(0).toUpperCase())}</div>
+        <div class="about-img">${heroImg?`<img src="${esc(heroImg)}" alt="${esc(content.company.trade)}" loading="lazy">`:esc((content.company.trade||'★').charAt(0).toUpperCase())}</div>
         <div>
           <div class="kicker">Sobre nós</div>
           <h2>${esc(content.company.name)}</h2>
@@ -643,8 +653,8 @@ p{margin:0}
 .hero h1{color:#fff;font-size:54px;max-width:680px;margin-bottom:18px;line-height:1.1}
 .hero p{color:rgba(255,255,255,.85);font-size:17px;line-height:1.55;max-width:560px;margin-bottom:32px}
 .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
-.hero-img{aspect-ratio:4/3;background:rgba(255,255,255,.1);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:120px;font-weight:700;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px)}
-.hero-img img{max-width:60%;max-height:60%}
+.hero-img{aspect-ratio:4/3;background:rgba(255,255,255,.1);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:120px;font-weight:700;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px);overflow:hidden}
+.hero-img img{width:100%;height:100%;object-fit:cover;border-radius:14px}
 .pill{display:inline-block;background:rgba(255,255,255,.15);padding:5px 12px;border-radius:99px;font-size:12.5px;margin-bottom:18px;backdrop-filter:blur(8px)}
 .pill-center{display:inline-block;margin:0 auto 18px}
 .hero-center{text-align:center;max-width:760px;margin:0 auto}
@@ -670,7 +680,8 @@ p{margin:0}
 .hero-mag-card p{color:rgba(255,255,255,.8);font-size:13.5px;line-height:1.5;margin:0}
 
 /* HERO D — product spotlight */
-.hero-d .product-img-placeholder{aspect-ratio:1;background:rgba(255,255,255,.12);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:88px;font-weight:800;color:#fff;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(10px);letter-spacing:4px}
+.hero-d .product-img-placeholder{aspect-ratio:1;background:rgba(255,255,255,.12);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:88px;font-weight:800;color:#fff;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(10px);letter-spacing:4px;overflow:hidden}
+.hero-d .product-img-placeholder img{width:100%;height:100%;object-fit:cover;border-radius:18px}
 .hero-d .hero-grid{grid-template-columns:1fr 1fr}
 .hero-d .hero-img.product-spot{padding:40px}
 
@@ -686,7 +697,8 @@ p{margin:0}
 .hero-f h1{max-width:780px;margin:0 auto 28px}
 .hero-prop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:32px;text-align:left}
 .hero-prop-card{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:14px;overflow:hidden}
-.hero-prop-img{aspect-ratio:4/3;background:linear-gradient(135deg,var(--accent),var(--primary));display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:800;color:#fff}
+.hero-prop-img{aspect-ratio:4/3;background:linear-gradient(135deg,var(--accent),var(--primary));display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:800;color:#fff;overflow:hidden}
+.hero-prop-img img{width:100%;height:100%;object-fit:cover}
 .hero-prop-card h3{color:#fff;font-size:16px;padding:14px 16px 4px}
 .hero-prop-card p{color:rgba(255,255,255,.8);font-size:13px;padding:0 16px 16px;margin:0;line-height:1.5;max-width:100%}
 
@@ -732,7 +744,8 @@ section{padding:90px 0}
 
 /* ABOUT */
 .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
-.about-img{aspect-ratio:1;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:88px;font-weight:700;letter-spacing:0;max-width:280px;margin:0 auto}
+.about-img{aspect-ratio:1;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:88px;font-weight:700;letter-spacing:0;max-width:280px;margin:0 auto;overflow:hidden}
+.about-img img{width:100%;height:100%;object-fit:cover;border-radius:14px}
 
 /* CTA BAND */
 .cta-band{background:linear-gradient(135deg,var(--accent),var(--primary));padding:72px 0;color:#fff;text-align:center}

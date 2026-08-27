@@ -69,7 +69,7 @@ function defaultData(company='',client='',segment='',city=''){
     ctaText:'Fale Conosco',ctaSecondary:'Saiba Mais',whatsappMessage:'Olá, gostaria de saber mais sobre os serviços.',
     ctaPrimary:'Fale Conosco',ctaSecondary:'Saiba Mais',
     primaryColor:'#0f172a',secondaryColor:'#475569',accentColor:'#22c55e',style:'moderno',
-    logo:null,images:[]
+    logo:null,images:[],image:null
   };
 }
 
@@ -86,6 +86,7 @@ function applyModelPreset(project, modelId){
   if(p.city && !d.city) d.city = p.city;
   if(p.state && !d.state) d.state = p.state;
   if(p.heroStyle) d.heroStyle = p.heroStyle;
+  if(p.image && !d.image) d.image = p.image;
   if(p.services && p.services.length && (!d.services||d.services.length===0)){
     d.services = p.services.map((s,i)=>Object.assign({icon:['⚡','★','✓','◆','●','✦'][i%6]},s));
   }
@@ -297,7 +298,7 @@ function modelMiniSite(m, preset){
       whatsappMessage:'Olá, gostaria de saber mais.',
       primaryColor:m.primary,secondaryColor:m.secondary||m.primary,accentColor:m.accent,
       style:m.style||'moderno',
-      logo:null,images:[],
+      logo:null,images:[], image: preset.image || null,
       heroStyle: preset.heroStyle || 'A',
     }
   };
@@ -322,7 +323,8 @@ section{padding:28px 0}
 .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center}
 .hero h1{font-size:36px;line-height:1.1;margin:8px 0;font-weight:800;color:var(--text,#0f172a)}
 .hero p{font-size:13px;color:var(--text-muted,#64748b);margin:8px 0;line-height:1.55}
-.hero-img{width:240px;height:240px;background:var(--surface,#f8f8fa);border:1px solid var(--border,#e5e7eb);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:100px;font-weight:800;color:var(--primary);margin:0 auto}
+.hero-img{aspect-ratio:4/3;border-radius:14px;background:var(--surface,#f8f8fa);border:1px solid var(--border,#e5e7eb);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:80px;font-weight:800;color:var(--primary);margin:0 auto}
+.hero-img img{width:100%;height:100%;object-fit:cover;border-radius:14px}
 .hero .pill{display:inline-block;background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:99px;font-size:10px;font-weight:600;color:var(--text);letter-spacing:.5px;text-transform:uppercase}
 .hero .btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .hero .btn.btn-p{background:var(--primary);color:#fff}
@@ -341,7 +343,8 @@ section{padding:28px 0}
 .hero-svc-item p{font-size:11px;color:var(--text-muted);margin:0}
 .hero-prop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}
 .hero-prop-card{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.hero-prop-img{height:90px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:var(--primary)}
+.hero-prop-img{height:90px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:var(--primary);overflow:hidden}
+.hero-prop-img img{width:100%;height:100%;object-fit:cover}
 .hero-prop-card h3{font-size:12px;margin:10px 12px 4px;color:var(--text)}
 .hero-prop-card p{font-size:10.5px;color:var(--text-muted);margin:0 12px 12px;line-height:1.4}
 .hero-gallery{display:flex;gap:12px;margin-top:24px;justify-content:center;flex-wrap:wrap}
@@ -839,8 +842,11 @@ function insertMedia(id){
 
 /* ---------- EDITOR ---------- */
 function renderEditor(c){
-  setPageTitle('Editor','Projeto · '+STATE.currentProject.company);
-  if(!STATE.currentProject){startNewProject();return}
+  const proj = STATE.currentProject;
+  setPageTitle('Editor', proj.data.company?`Projeto · ${proj.data.company}`:'Novo projeto');
+  if(!proj){startNewProject();return}
+  const modelName = (MODELS.find(m=>m.id===proj.modelId)||{}).name || 'Personalizado';
+  const modelColor = (MODELS.find(m=>m.id===proj.modelId)||{}).primary || '#7c5cff';
   c.innerHTML=`
     <div class="flow-steps">
       <div class="step done"><div class="step-num">✓</div>Modelo</div>
@@ -858,22 +864,31 @@ function renderEditor(c){
     <div class="editor">
       <div class="editor-panel" id="editorPanel">${editorPanelHTML()}</div>
       <div class="editor-canvas">
-        <div class="device-bar">
-          <div class="device-btn ${STATE.device==='desktop'?'active':''}" onclick="setEditorDevice('desktop')">🖥 Desktop</div>
-          <div class="device-btn ${STATE.device==='tablet'?'active':''}" onclick="setEditorDevice('tablet')">▭ Tablet</div>
-          <div class="device-btn ${STATE.device==='mobile'?'active':''}" onclick="setEditorDevice('mobile')">▯ Mobile</div>
-          <div class="device-spacer"></div>
-          <div class="device-meta">Preview em tempo real</div>
+        <div class="canvas-toolbar">
+          <div class="canvas-toolbar-left">
+            <span class="model-pill" style="--mc:${modelColor}">
+              <span class="dot"></span>${esc(modelName)}
+            </span>
+            <span class="page-pill">${(TEMPLATES[proj.templateId]||{}).pages?.length || 0} páginas</span>
+            <span class="status-dot ${proj.status||'draft'}"></span>
+          </div>
+          <div class="device-bar">
+            <div class="device-btn ${STATE.device==='desktop'?'active':''}" onclick="setEditorDevice('desktop')">🖥</div>
+            <div class="device-btn ${STATE.device==='tablet'?'active':''}" onclick="setEditorDevice('tablet')">▭</div>
+            <div class="device-btn ${STATE.device==='mobile'?'active':''}" onclick="setEditorDevice('mobile')">▯</div>
+          </div>
+          <div class="canvas-toolbar-right">
+            <button class="btn btn-ghost btn-sm" onclick="saveCurrent()">💾</button>
+            <button class="btn btn-ghost btn-sm" onclick="undoVersion()">↶</button>
+            <button class="btn btn-ghost btn-sm" onclick="redoVersion()">↷</button>
+            <button class="btn btn-secondary btn-sm" onclick="presentProject('${proj.id}')" title="Preview em tela cheia">👁 Preview</button>
+            <button class="btn btn-primary btn-sm" onclick="openExport()">⤓ Exportar</button>
+          </div>
         </div>
         <div class="canvas-frame ${STATE.device}" id="canvasFrame">${renderPreview()}</div>
-        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;justify-content:center">
-          <button class="btn btn-secondary" onclick="saveCurrent()">💾 Salvar</button>
-          <button class="btn btn-secondary" onclick="openVersions()">⏱ Versões</button>
-          <button class="btn btn-secondary" onclick="undoVersion()">↶ Desfazer</button>
-          <button class="btn btn-secondary" onclick="redoVersion()">↷ Refazer</button>
-          <button class="btn btn-primary" onclick="generateProject()">✦ GERAR SITE</button>
-          <button class="btn btn-primary" onclick="presentProject('${STATE.currentProject.id}')">▶ Apresentar</button>
-          <button class="btn btn-primary" onclick="openExport()">⤓ Exportar ZIP</button>
+        <div class="canvas-bottom">
+          <div class="canvas-hint">Edite ao lado · preview atualiza em tempo real</div>
+          <button class="btn btn-primary" onclick="generateProject()">✦ GERAR PROJETO COMPLETO</button>
         </div>
       </div>
     </div>
@@ -882,7 +897,7 @@ function renderEditor(c){
 
 function setEditorDevice(d){
   STATE.device=d;
-  $$('.device-btn').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().includes(d==='desktop'?'desktop':d==='tablet'?'tablet':'mobile')));
+  $$('.device-btn').forEach(b=>b.classList.toggle('active',b.dataset.device===d||b.dataset.device===undefined&&b.textContent.toLowerCase().includes(d==='desktop'?'desktop':d==='tablet'?'tablet':'mobile')));
   const f=$('#canvasFrame');if(f)f.className='canvas-frame '+d;
 }
 
@@ -925,6 +940,15 @@ function editorInfoTab(d){
       <div class="field"><label>CNPJ</label><input value="${esc(d.cnpj)}" oninput="updField('cnpj',this.value)"></div>
     </div>
     <div class="form-section">
+      <h3>Imagem de capa</h3>
+      <p style="font-size:11.5px;color:var(--text-3);margin-bottom:8px;line-height:1.5">Esta imagem aparece no hero e na seção "Sobre" do site gerado. Use uma foto horizontal do seu negócio.</p>
+      <div class="upload-zone" onclick="document.getElementById('heroImgInput').click()">
+        ${d.image?`<div class="img-thumb" style="margin:0 auto;max-width:240px"><img src="${esc(d.image)}"><div class="x" onclick="event.stopPropagation();updField('image',null);render()">✕</div></div>`:`<div class="upload-icon">⬆</div><div class="upload-text">Enviar imagem do hero</div><div class="upload-hint">JPG ou PNG · proporção horizontal</div>`}
+        <input id="heroImgInput" type="file" accept="image/*" style="display:none" onchange="uploadHeroImage(event)">
+      </div>
+      <div class="field" style="margin-top:8px"><label>Ou cole uma URL</label><input value="${esc(d.image||'')}" placeholder="https://..." oninput="updField('image',this.value||null)"></div>
+    </div>
+    <div class="form-section">
       <h3>Contato</h3>
       <div class="field"><label>WhatsApp <span style="color:var(--danger)">*</span></label><input value="${esc(d.whatsapp)}" oninput="updField('whatsapp',this.value)"></div>
       <div class="field"><label>Telefone</label><input value="${esc(d.phone)}" oninput="updField('phone',this.value)"></div>
@@ -938,7 +962,7 @@ function editorInfoTab(d){
     </div>
     <div class="form-section">
       <h3>Sobre a empresa</h3>
-      <div class="field"><textarea oninput="updField('about',this.value)">${esc(d.about)}</textarea></div>
+      <div class="field"><textarea oninput="updField('about',this.value)" rows="4">${esc(d.about)}</textarea></div>
     </div>
     <div class="form-section">
       <h3>Logo</h3>
@@ -951,6 +975,13 @@ function editorInfoTab(d){
       ${d.logo?`<div class="img-preview"><div class="img-thumb"><img src="${d.logo}"><div class="x" onclick="removeLogo()">✕</div></div></div>`:''}
     </div>
   `;
+}
+
+function uploadHeroImage(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{STATE.currentProject.data.image=ev.target.result;render();toast('Imagem do hero atualizada')};
+  r.readAsDataURL(f);
 }
 
 function editorVisualTab(d){

@@ -6,6 +6,39 @@
 // São templates editáveis do segmento — não inventam números/certificações.
 // Cada modelo ganha um heroStyle (A..G) que o site-generator usa para escolher layout.
 // `company` é um nome sugerido para o usuário editar — nunca fica vazio.
+// URLs de imagens livres (Unsplash) por categoria de empresa
+// Cada preset traz um `image` para o hero/about — visível no preview e nos cards.
+const IMG = {
+  corporate:'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80&auto=format&fit=crop',
+  modern:'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80&auto=format&fit=crop',
+  premium:'https://images.unsplash.com/photo-1564013434775-f71db0030976?w=1200&q=80&auto=format&fit=crop',
+  minimal:'https://images.unsplash.com/photo-1493612276216-ee3925520721?w=1200&q=80&auto=format&fit=crop',
+  local:'https://images.unsplash.com/photo-1604754742629-3e5728249d73?w=1200&q=80&auto=format&fit=crop',
+  construction:'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1200&q=80&auto=format&fit=crop',
+  clinic:'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&q=80&auto=format&fit=crop',
+  realestate:'https://images.unsplash.com/photo-1560448204-e02f11c3de0f?w=1200&q=80&auto=format&fit=crop',
+  services:'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=1200&q=80&auto=format&fit=crop',
+  electrician:'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=1200&q=80&auto=format&fit=crop',
+  plumber:'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1200&q=80&auto=format&fit=crop',
+  mechanic:'https://images.unsplash.com/photo-1486496572940-2bb2341fdbdf?w=1200&q=80&auto=format&fit=crop',
+  techassist:'https://images.unsplash.com/photo-1588508065123-287b28e013da?w=1200&q=80&auto=format&fit=crop',
+  cleaning:'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200&q=80&auto=format&fit=crop',
+  agency:'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=1200&q=80&auto=format&fit=crop',
+  photographer:'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=1200&q=80&auto=format&fit=crop',
+  'lp-product':'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1200&q=80&auto=format&fit=crop',
+  offer:'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=1200&q=80&auto=format&fit=crop',
+  sales:'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&q=80&auto=format&fit=crop',
+  'premium-prod':'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&q=80&auto=format&fit=crop',
+  catalog:'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&q=80&auto=format&fit=crop',
+  'local-prod':'https://images.unsplash.com/photo-1488459716781-15db0f5928f5?w=1200&q=80&auto=format&fit=crop',
+  lawyer:'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1200&q=80&auto=format&fit=crop',
+  accountant:'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1200&q=80&auto=format&fit=crop',
+  broker:'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=1200&q=80&auto=format&fit=crop',
+  trainer:'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&q=80&auto=format&fit=crop',
+  consultant:'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&q=80&auto=format&fit=crop',
+  autonomo:'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=1200&q=80&auto=format&fit=crop',
+};
+
 const MODEL_PRESETS = {
   'corporate':{
     company:'Grupo Sólida',
@@ -13,6 +46,7 @@ const MODEL_PRESETS = {
     about:'Atuamos com metodologia, governança e processos maduros para entregar resultados consistentes em cada projeto.',
     segment:'Empresarial',city:'São Paulo',state:'SP',
     heroStyle:'A',
+    image:IMG.corporate,
     services:[
       {name:'Consultoria Estratégica',desc:'Diagnóstico e plano de ação sob medida para o seu negócio.'},
       {name:'Gestão de Projetos',desc:'Execução com cronograma, marcos e governança.'},
@@ -34,6 +68,7 @@ const MODEL_PRESETS = {
     about:'Combinamos estratégia, design e engenharia para construir produtos digitais que geram resultado mensurável.',
     segment:'Tecnologia',city:'Florianópolis',state:'SC',
     heroStyle:'C',
+image:IMG.modern,
     services:[
       {name:'Software Sob Medida',desc:'Aplicações web, mobile e integrações sob medida.'},
       {name:'Cloud e DevOps',desc:'Infraestrutura escalável, monitorada e segura.'},
@@ -55,6 +90,7 @@ const MODEL_PRESETS = {
     about:'Cada detalhe é desenhado para refletir exclusividade, sofisticação e a identidade do cliente.',
     segment:'Premium',city:'São Paulo',state:'SP',
     heroStyle:'B',
+image:IMG.premium,
     services:[
       {name:'Atendimento Concierge',desc:'Acompanhamento dedicado e personalizado.'},
       {name:'Curadoria de Produtos',desc:'Seleção criteriosa das melhores marcas e parceiros.'},
@@ -75,6 +111,7 @@ const MODEL_PRESETS = {
     about:'Projetos limpos, funcionais e sem ruído. Cada elemento tem um propósito claro.',
     segment:'Design',city:'Curitiba',state:'PR',
     heroStyle:'B',
+image:IMG.minimal,
     services:[
       {name:'Branding',desc:'Identidade visual simples, memorável e aplicável.'},
       {name:'Design Digital',desc:'Interfaces claras, rápidas e centradas no usuário.'},
@@ -95,6 +132,7 @@ const MODEL_PRESETS = {
     about:'Negócios locais com atendimento próximo, agilidade e o profissionalismo que o cliente merece.',
     segment:'Comércio Local',city:'Campinas',state:'SP',
     heroStyle:'E',
+image:IMG.local,
     services:[
       {name:'Atendimento Presencial',desc:'Loja física com equipe pronta para atender e tirar dúvidas.'},
       {name:'Entrega Local',desc:'Logística ágil para a sua região com prazos claros.'},
@@ -115,6 +153,7 @@ const MODEL_PRESETS = {
     about:'Construção, reforma e arquitetura com equipe própria, cronograma cumprido e acabamento impecável.',
     segment:'Construção',city:'Belo Horizonte',state:'MG',
     heroStyle:'A',
+image:IMG.construction,
     services:[
       {name:'Construção Civil',desc:'Obras residenciais e comerciais completas, do zero à entrega.'},
       {name:'Reformas',desc:'Modernização de ambientes com planejamento e pouca quebra.'},
@@ -135,6 +174,7 @@ const MODEL_PRESETS = {
     about:'Atendimento humanizado em saúde, com estrutura completa e profissionais especializados.',
     segment:'Saúde',city:'Rio de Janeiro',state:'RJ',
     heroStyle:'B',
+image:IMG.clinic,
     services:[
       {name:'Consultas Especializadas',desc:'Profissionais com formação e experiência comprovadas.'},
       {name:'Exames',desc:'Equipamentos modernos e laudos rápidos.'},
@@ -155,6 +195,7 @@ const MODEL_PRESETS = {
     about:'Acompanhamos você em todas as etapas da compra, venda ou aluguel do seu imóvel.',
     segment:'Imóveis',city:'São Paulo',state:'SP',
     heroStyle:'F',
+image:IMG.realestate,
     services:[
       {name:'Compra e Venda',desc:'Assessoria completa do início ao fim da transação.'},
       {name:'Aluguel',desc:'Cadastro de imóveis e análise de fiadores.'},
@@ -175,6 +216,7 @@ const MODEL_PRESETS = {
     about:'Profissionais certificados para resolver desde a manutenção do dia a dia até projetos maiores.',
     segment:'Serviços',city:'Niterói',state:'RJ',
     heroStyle:'E',
+image:IMG.services,
     services:[
       {name:'Manutenção Predial',desc:'Reparos gerais com equipe própria.'},
       {name:'Instalações',desc:'Serviços de instalações elétricas, hidráulicas e acabamento.'},
@@ -195,6 +237,7 @@ const MODEL_PRESETS = {
     about:'Serviços elétricos residenciais e comerciais com normas técnicas e equipe certificada.',
     segment:'Eletricidade',city:'Curitiba',state:'PR',
     heroStyle:'A',
+image:IMG.electrician,
     services:[
       {name:'Instalações Elétricas',desc:'Projetos novos, com padrões e normas técnicas.'},
       {name:'Manutenção e Reparos',desc:'Diagnóstico e correção de falhas com rapidez.'},
@@ -215,6 +258,7 @@ const MODEL_PRESETS = {
     about:'Soluções hidráulicas residenciais e comerciais com diagnóstico claro antes de qualquer serviço.',
     segment:'Encanamento',city:'Porto Alegre',state:'RS',
     heroStyle:'A',
+image:IMG.plumber,
     services:[
       {name:'Desentupimento',desc:'Pias, ralos, vasos e colunas com equipamento profissional.'},
       {name:'Reparo de Vazamentos',desc:'Detecção e correção sem quebra desnecessária.'},
@@ -235,6 +279,7 @@ const MODEL_PRESETS = {
     about:'Oficina mecânica com diagnóstico detalhado, orçamento claro e peças de procedência.',
     segment:'Automotivo',city:'São Paulo',state:'SP',
     heroStyle:'A',
+image:IMG.mechanic,
     services:[
       {name:'Revisão Periódica',desc:'Troca de óleo, filtros, fluidos e checagem geral.'},
       {name:'Motor e Câmbio',desc:'Diagnóstico e reparo com equipamento de ponta.'},
@@ -255,6 +300,7 @@ const MODEL_PRESETS = {
     about:'Assistência técnica especializada em celulares, notebooks e eletrodomésticos.',
     segment:'Reparos',city:'Recife',state:'PE',
     heroStyle:'E',
+image:IMG.techassist,
     services:[
       {name:'Celulares',desc:'Troca de tela, bateria, conectores e software.'},
       {name:'Notebooks',desc:'Formatação, troca de peças e reparo de placas.'},
@@ -275,6 +321,7 @@ const MODEL_PRESETS = {
     about:'Limpeza residencial e comercial com equipe treinada, produtos profissionais e agendamento flexível.',
     segment:'Limpeza',city:'Goiânia',state:'GO',
     heroStyle:'A',
+image:IMG.cleaning,
     services:[
       {name:'Limpeza Residencial',desc:'Faxina completa com atendimento semanal, quinzenal ou mensal.'},
       {name:'Limpeza Comercial',desc:'Condomínios, escritórios e lojas com equipe fixa.'},
@@ -295,6 +342,7 @@ const MODEL_PRESETS = {
     about:'Agência criativa focada em resultado. Briefing afiado, conceito forte e entrega no prazo.',
     segment:'Agência',city:'São Paulo',state:'SP',
     heroStyle:'C',
+image:IMG.agency,
     services:[
       {name:'Campanhas Integradas',desc:'Mídia, conteúdo e performance trabalhando juntos.'},
       {name:'Branding',desc:'Posicionamento, identidade verbal e visual.'},
@@ -315,6 +363,7 @@ const MODEL_PRESETS = {
     about:'Fotografia autoral para ensaios, casamentos, marcas e eventos.',
     segment:'Fotografia',city:'Florianópolis',state:'SC',
     heroStyle:'G',
+image:IMG.photographer,
     services:[
       {name:'Ensaio Pessoal',desc:'Retratos em estúdio ou locação, com direção de arte.'},
       {name:'Casamentos',desc:'Cobertura completa do making of à festa.'},
@@ -335,6 +384,7 @@ const MODEL_PRESETS = {
     about:'Landing page focada em conversão. Um produto, uma decisão, um botão.',
     segment:'E-commerce',city:'São Paulo',state:'SP',
     heroStyle:'D',
+image:IMG['lp-product'],
     services:[
       {name:'Produto em Destaque',desc:'Apresentação visual completa com benefícios e garantias.'},
       {name:'Prova Social',desc:'Espaço para depoimentos reais de clientes.'},
@@ -355,6 +405,7 @@ const MODEL_PRESETS = {
     about:'Página de oferta com contagem regressiva, escassez e CTA único. Foco em conversão rápida.',
     segment:'Vendas',city:'Brasília',state:'DF',
     heroStyle:'A',
+image:IMG.offer,
     services:[
       {name:'Oferta Completa',desc:'Bônus, garantia e preço destacado.'},
       {name:'Countdown Real',desc:'Timer que se reinicia ao entrar na página.'},
@@ -375,6 +426,7 @@ const MODEL_PRESETS = {
     about:'Página de vendas com vitrine ampla, blocos de benefícios e funil claro do clique à compra.',
     segment:'Loja',city:'São Paulo',state:'SP',
     heroStyle:'D',
+image:IMG.sales,
     services:[
       {name:'Vitrine Completa',desc:'Catálogo organizado por categorias.'},
       {name:'Selos de Confiança',desc:'Site seguro, política de troca e dados protegidos.'},
@@ -395,6 +447,7 @@ const MODEL_PRESETS = {
     about:'Apresentação sofisticada para produtos de alto valor agregado. Detalhes, especificação e curadoria.',
     segment:'Premium',city:'São Paulo',state:'SP',
     heroStyle:'B',
+image:IMG['premium-prod'],
     services:[
       {name:'Página Premium',desc:'Design minimalista e detalhado.'},
       {name:'Vídeo ou Showcase',desc:'Espaço para mídia em alta resolução.'},
@@ -415,6 +468,7 @@ const MODEL_PRESETS = {
     about:'Catálogo extenso de produtos com filtros, busca e categorias bem definidas.',
     segment:'Catálogo',city:'São Paulo',state:'SP',
     heroStyle:'D',
+image:IMG.catalog,
     services:[
       {name:'Catálogo por Categoria',desc:'Organização clara com filtros laterais.'},
       {name:'Especificações Técnicas',desc:'Ficha detalhada em cada produto.'},
@@ -435,6 +489,7 @@ const MODEL_PRESETS = {
     about:'Produtos locais com identidade regional, produção artesanal e procedência rastreada.',
     segment:'Regional',city:'Vitória',state:'ES',
     heroStyle:'A',
+image:IMG['local-prod'],
     services:[
       {name:'Produção Local',desc:'Feito em pequenas tiragens na nossa região.'},
       {name:'Ingredientes Rastreáveis',desc:'Origem de cada matéria-prima documentada.'},
@@ -455,6 +510,7 @@ const MODEL_PRESETS = {
     about:'Escritório de advocacia com atendimento reservado e estratégia clara para cada caso.',
     segment:'Advocacia',city:'São Paulo',state:'SP',
     heroStyle:'A',
+image:IMG.lawyer,
     services:[
       {name:'Direito Civil',desc:'Contratos, família, consumidor e responsabilidade civil.'},
       {name:'Direito Trabalhista',desc:'Defesa e propositura de ações trabalhistas.'},
@@ -475,6 +531,7 @@ const MODEL_PRESETS = {
     about:'Escritório contábil com atendimento próximo, obrigações em dia e relatórios que fazem sentido.',
     segment:'Contábil',city:'Curitiba',state:'PR',
     heroStyle:'B',
+image:IMG.accountant,
     services:[
       {name:'Contabilidade Mensal',desc:'Escrituração, impostos e obrigações fiscais.'},
       {name:'Folha de Pagamento',desc:'Funcionários, encargos e rescisões.'},
@@ -495,6 +552,7 @@ const MODEL_PRESETS = {
     about:'Corretor de imóveis com carteira CRECI, atendimento personalizado e curadoria de regiões.',
     segment:'Corretagem',city:'Florianópolis',state:'SC',
     heroStyle:'F',
+image:IMG.broker,
     services:[
       {name:'Compra Assistida',desc:'Acompanhamento em toda a jornada, da escolha ao registro.'},
       {name:'Venda do seu Imóvel',desc:'Marketing, visitas e negociação com estratégia.'},
@@ -515,6 +573,7 @@ const MODEL_PRESETS = {
     about:'Personal trainer com avaliação física, plano periodizado e acompanhamento semanal.',
     segment:'Fitness',city:'São Paulo',state:'SP',
     heroStyle:'A',
+image:IMG.trainer,
     services:[
       {name:'Avaliação Física',desc:'Composição, força, mobilidade e cardio.'},
       {name:'Plano de Treino',desc:'Periodização ajustada a objetivo e rotina.'},
@@ -535,6 +594,7 @@ const MODEL_PRESETS = {
     about:'Consultoria empresarial com diagnóstico claro, plano executável e acompanhamento de marcos.',
     segment:'Consultoria',city:'Rio de Janeiro',state:'RJ',
     heroStyle:'C',
+image:IMG.consultant,
     services:[
       {name:'Diagnóstico',desc:'Mapeamento de processos, gargalos e oportunidades.'},
       {name:'Plano de Ação',desc:'Estratégia com cronograma, responsáveis e metas.'},
@@ -555,6 +615,7 @@ const MODEL_PRESETS = {
     about:'Profissional autônomo com agenda flexível, atendimento personalizado e orçamento claro.',
     segment:'Autônomo',city:'Sua cidade',state:'SP',
     heroStyle:'A',
+image:IMG.autonomo,
     services:[
       {name:'Atendimento Personalizado',desc:'Trabalho direto com o profissional, sem intermediários.'},
       {name:'Orçamento Claro',desc:'Valor combinado antes do início do serviço.'},

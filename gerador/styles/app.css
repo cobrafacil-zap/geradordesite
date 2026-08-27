@@ -151,8 +151,20 @@ a{color:inherit;text-decoration:none}
 .canvas-frame{background:#fff;border-radius:10px;overflow:hidden;box-shadow:var(--shadow-lg);width:100%;max-width:1100px;min-height:600px;color:#111;transition:max-width .3s ease}
 .canvas-frame.tablet{max-width:780px}
 .canvas-frame.mobile{max-width:380px}
-.device-bar{display:flex;align-items:center;gap:4px;background:var(--bg-3);padding:8px 12px;border-radius:8px;margin-bottom:12px;border:1px solid var(--border)}
-.device-btn{padding:5px 10px;font-size:12px;color:var(--text-2);border-radius:6px;cursor:pointer;font-weight:500}
+.canvas-toolbar{display:flex;align-items:center;gap:10px;background:var(--bg-3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:14px;flex-wrap:wrap}
+.canvas-toolbar-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.canvas-toolbar-right{display:flex;align-items:center;gap:6px}
+.model-pill{display:inline-flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);padding:5px 11px;border-radius:99px;font-size:12px;font-weight:600;color:var(--text);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.model-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--mc,#7c5cff);box-shadow:0 0 0 3px rgba(124,92,255,.2);flex-shrink:0}
+.page-pill{font-size:11.5px;color:var(--text-3);background:var(--surface);padding:4px 9px;border-radius:99px;border:1px solid var(--border)}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-3)}
+.status-dot.draft{background:var(--warn)}
+.status-dot.ready,.status-dot.exported{background:var(--success)}
+.status-dot.generating{background:var(--accent)}
+.canvas-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;flex-wrap:wrap}
+.canvas-hint{font-size:12px;color:var(--text-3);background:var(--bg-3);padding:8px 14px;border-radius:8px;border:1px solid var(--border)}
+.device-bar{display:flex;align-items:center;gap:3px;background:var(--surface);padding:3px;border-radius:8px;border:1px solid var(--border)}
+.device-btn{padding:5px 9px;font-size:13px;color:var(--text-2);border-radius:6px;cursor:pointer;font-weight:500}
 .device-btn.active{background:var(--surface-2);color:var(--text)}
 .device-spacer{flex:1}
 .device-meta{font-size:11.5px;color:var(--text-3)}
