@@ -241,13 +241,21 @@ function modelCard(m){
   const company = preset.company||m.name;
   // Render real do site com os dados do preset (mini-versão dentro do card)
   const miniHTML = modelMiniSite(m, preset);
-  return `<div class="model-card" onclick="useModel('${m.id}')">
+  return `<div class="model-card">
     <div class="model-preview" data-layout="${m.mockLayout||'split'}">
       <span class="model-tag">${catName(m.cat)}</span>
       <div class="model-name-large">${m.name}</div>
       <div class="model-mini" data-model="${m.id}">${miniHTML}</div>
+      <div class="model-card-actions">
+        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();previewModel('${m.id}')" title="Ver site em tela cheia">
+          👁 Preview
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useModel('${m.id}')" title="Abrir este modelo no editor">
+          ✏ Editar
+        </button>
+      </div>
     </div>
-    <div class="model-body">
+    <div class="model-body" onclick="useModel('${m.id}')" style="cursor:pointer">
       <div class="model-name">${m.name}</div>
       <div class="model-desc">${m.desc} · ${esc(seg)}</div>
       ${slogan?`<div class="model-slogan-sm">"${esc(slogan.slice(0,80))}${slogan.length>80?'…':''}"</div>`:''}
@@ -1182,7 +1190,24 @@ function renderPreview(){
   const d=STATE.currentProject.data;
   const tpl=TEMPLATES[STATE.currentProject.templateId]||TEMPLATES['empresa-corporativa'];
   const home = tpl.pages[0];
-  return SiteGenerator.renderPageHTML(home,STATE.currentProject,SiteGenerator.buildTheme(d),SiteGenerator.buildProjectContent(STATE.currentProject),[]);
+  const theme=SiteGenerator.buildTheme(d);
+  const html=SiteGenerator.renderPageHTML(home,STATE.currentProject,theme,SiteGenerator.buildProjectContent(STATE.currentProject),[]);
+  // Editor preview: sharedCSS escopado em .canvas-frame para não conflitar com o :root do app
+  const css = SiteGenerator.sharedCSS ? SiteGenerator.sharedCSS(theme, '.canvas-frame') : '';
+  return `<style>${css}
+/* ===== editor canvas overrides — site real dentro do frame ===== */
+.canvas-frame, .canvas-frame *{box-sizing:border-box}
+.canvas-frame{margin:0;font-family:Inter,system-ui,sans-serif;color:#111}
+.canvas-frame .wrap{max-width:1100px;margin:0 auto;padding:0 32px}
+.canvas-frame section{padding:60px 0}
+.canvas-frame .alt{background:#f8f8fa}
+.canvas-frame .site-header{padding:14px 0;border-bottom:1px solid #e5e7eb;background:#fff;position:relative}
+.canvas-frame .site-header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.canvas-frame .site-header .logo{font-weight:700;font-size:15px;color:var(--secondary,#0f172a)}
+.canvas-frame .site-header .menu{display:flex;gap:14px}
+.canvas-frame .site-header .menu a{color:#222;text-decoration:none;font-size:12px;font-weight:500}
+.canvas-frame .site-header .btn{padding:6px 14px;font-size:12px;border-radius:6px;background:var(--primary,#0f172a);color:#fff;text-decoration:none;font-weight:500}
+</style>${html}`;
 }
 
 /* ---------- PROJECT LIFECYCLE ---------- */
@@ -1388,6 +1413,33 @@ function setLoadingStep(text,current,total){
 function hideLoading(){$('#loadingOverlay').classList.add('hidden')}
 
 /* ---------- PRESENTATION ---------- */
+function previewModel(id){
+  const m=MODELS.find(x=>x.id===id);if(!m)return;
+  const preset = (typeof MODEL_PRESETS!=='undefined' && MODEL_PRESETS[id])||{};
+  const seg = preset.segment||m.desc.split(' ')[0]||'';
+  const city = preset.city||'';
+  const company = preset.company||m.name;
+  const suggestedName = company ? `Site ${company}` : `Projeto ${m.name}`;
+  STATE.currentProject={
+    id:'preview-'+uid(),
+    name:suggestedName,
+    client:'',
+    company:company,
+    segment:seg,
+    city:city,
+    modelId:id,
+    templateId:MODEL_TO_TEMPLATE[id]||'empresa-corporativa',
+    status:'draft',
+    createdAt:Date.now(),
+    data:defaultData(company,'',seg,city),
+    versions:[]
+  };
+  applyModelPreset(STATE.currentProject, id);
+  applyTemplateDefaults(STATE.currentProject);
+  if(!STATE.currentProject.data.company && preset.company) STATE.currentProject.data.company = preset.company;
+  if(!STATE.currentProject.data.trade) STATE.currentProject.data.trade = STATE.currentProject.data.company;
+  presentProject(STATE.currentProject.id);
+}
 function presentProject(id){
   const proj=id?STATE.projects.find(x=>x.id===id):STATE.currentProject;
   if(!proj)return;
