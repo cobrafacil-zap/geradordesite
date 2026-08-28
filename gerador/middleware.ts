@@ -59,7 +59,7 @@ export async function middleware(request: NextRequest) {
     }
 
     if (session && (pathname === '/login' || pathname === '/')) {
-      return NextResponse.redirect(new URL('/projects', request.url));
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   } catch (err) {
     // NUNCA deixar o middleware quebrar — apenas log e segue

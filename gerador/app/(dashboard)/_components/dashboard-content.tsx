@@ -1,12 +1,14 @@
+'use client';
+
 /**
- * Dashboard — landing do Gerador.
- * Saudação dinâmica + stats + projetos recentes + atalhos.
+ * Conteúdo do dashboard renderizado client-side.
+ * Quebrar em client component força o Next 14 a gerar
+ * `app/(dashboard)/page_client-reference-manifest.js`,
+ * corrigindo o ENOENT no build da Vercel.
  */
 import Link from 'next/link';
 import { Card, Badge } from '@/components/ui';
 import { Icon } from '@/components/dashboard/sidebar';
-
-export const dynamic = 'force-dynamic';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -16,7 +18,7 @@ function getGreeting() {
   return 'Boa noite';
 }
 
-export default async function DashboardPage() {
+export function DashboardContent() {
   const greeting = getGreeting();
   const now = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long',

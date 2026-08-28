@@ -12,7 +12,7 @@ export default async function HomePage() {
     const supabase = createServerSupabase();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) redirect('/login');
-    redirect('/projects');
+    redirect('/dashboard');
   } catch (err: any) {
     // Se redirect() falhar (raro), força dashboard como destino
     console.error('HomePage error:', err);
