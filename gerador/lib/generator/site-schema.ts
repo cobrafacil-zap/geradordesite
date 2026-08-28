@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { getPack } from './templates/content/registry';
 
 // ─────────────────────────────────────────────────────────────────
 // SiteSchema — fonte canônica de toda a estrutura de um site gerado.
@@ -155,85 +156,149 @@ export function withDefaults(input: Partial<Site> & { site: { name: string } }):
 
 /**
  * Constrói um Site completo a partir de um template conhecido + nome comercial.
- * Usado pelos testes e como fallback quando a IA não retorna schema válido.
+ * Usa o "content pack" do slug para gerar copy, cores, imagens e seções únicas
+ * por template. Quando o pack não tem um campo, aplica fallback razoável.
  */
 export function siteSchemaForTemplate(templateSlug: string, tradeName: string): Site {
-  const siteName = tradeName || 'Empresa';
-  const lower = siteName.toLowerCase();
+  const pack = getPack(templateSlug);
+  const siteName = tradeName || pack.slug;
+  const lower = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+  // Home: Hero → Sobre → (Stats) → Serviços → (Diferenciais) →
+  // (Galeria | Menu | Produtos) → (Depoimentos) → (FAQ) → CTA
+  const homeSections: any[] = [
+    { component: 'Header', variant: 'sticky-dark', content: { whatsapp: pack.whatsapp } },
+    {
+      component: 'Hero',
+      variant: 'split',
+      content: {
+        eyebrow: pack.hero.eyebrow,
+        title: pack.hero.title,
+        subtitle: pack.hero.subtitle,
+        ctaLabel: pack.hero.ctaLabel,
+        ctaHref: pack.hero.ctaHref,
+        image: pack.hero.image,
+        imageAlt: pack.hero.imageAlt,
+      },
+    },
+    {
+      component: 'About',
+      variant: 'simple',
+      content: { title: 'Sobre nós', text: pack.aboutText },
+    },
+  ];
+
+  if (pack.stats && pack.stats.length) {
+    homeSections.push({ component: 'Stats', variant: 'default', content: { title: 'Nossos números', items: pack.stats } });
+  }
+
+  homeSections.push({ component: 'Services', variant: 'grid', content: { title: 'Serviços', items: pack.services } });
+
+  if (pack.differentials && pack.differentials.length) {
+    homeSections.push({ component: 'Differentials', variant: 'default', content: { title: 'Por que nos escolher', items: pack.differentials } });
+  }
+
+  if (pack.gallery && pack.gallery.length) {
+    homeSections.push({ component: 'Gallery', variant: 'grid', content: { title: 'Galeria', items: pack.gallery } });
+  } else if (pack.menu && pack.menu.length) {
+    homeSections.push({ component: 'MenuPreview', variant: 'simple', content: { title: 'Cardápio', items: pack.menu } });
+  } else if (pack.products && pack.products.length) {
+    homeSections.push({ component: 'Products', variant: 'grid', content: { title: 'Em destaque', items: pack.products } });
+  }
+
+  if (pack.testimonials && pack.testimonials.length) {
+    homeSections.push({ component: 'Testimonials', variant: 'default', content: { title: 'Depoimentos', items: pack.testimonials } });
+  }
+
+  if (pack.faq && pack.faq.length) {
+    homeSections.push({ component: 'FAQ', variant: 'default', content: { title: 'Perguntas frequentes', items: pack.faq } });
+  }
+
+  homeSections.push({ component: 'CTA', variant: 'centered', content: { title: pack.ctaTitle, ctaLabel: pack.ctaLabel, ctaHref: '#contato' } });
+  homeSections.push({ component: 'Footer', variant: 'simple', content: { floatingWa: true } });
+
   return withDefaults({
     site: {
       name: siteName,
       trade: siteName,
-      slogan: 'Excelência em ' + templateSlug,
+      slogan: pack.tagline,
       segment: templateSlug,
       language: 'pt-BR',
       locale: 'pt_BR',
     },
     theme: {
       colors: {
-        primary: '#0f172a', secondary: '#06b6d4', accent: '#f97316',
-        background: '#ffffff', surface: '#f8fafc',
-        text: '#0f172a', textMuted: '#64748b', border: '#e2e8f0',
+        primary: pack.palette.primary,
+        secondary: pack.palette.secondary,
+        accent: pack.palette.accent,
+        background: '#ffffff',
+        surface: pack.palette.surface,
+        text: '#0f172a',
+        textMuted: '#64748b',
+        border: '#e5e7eb',
       },
-      typography: { heading: 'Inter', body: 'Inter' },
-      radius: 'medium',
+      typography: { heading: 'Inter, system-ui, sans-serif', body: 'Inter, system-ui, sans-serif' },
+      radius: '8px',
       style: 'moderno',
     },
     navigation: [
       { label: 'Início', href: '/' },
       { label: 'Sobre', href: '/sobre' },
       { label: 'Serviços', href: '/servicos' },
-      { label: 'Contato', href: '/contato' },
+      { label: 'Contato', href: '#contato' },
     ],
     pages: [
       {
-        slug: '/', name: 'Início', title: siteName, description: 'Página inicial de ' + siteName,
-        sections: [
-          { component: 'Header', variant: 'sticky-dark', content: { whatsapp: '5511999999999' } },
-          { component: 'Hero', variant: 'split', content: { headline: 'Bem-vindo à ' + siteName, subheadline: 'Confira nossos serviços', ctas: [{ label: 'Fale conosco', href: '/contato' }] } },
-          { component: 'Services', variant: 'grid', content: { title: 'Serviços', items: [] } },
-          { component: 'CTA', variant: 'centered', content: { title: 'Pronto para começar?' } },
-          { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
-        ],
+        slug: '/', name: 'Início', title: siteName,
+        description: pack.tagline,
+        sections: homeSections,
       },
       {
         slug: '/sobre', name: 'Sobre', title: 'Sobre', description: 'Sobre a ' + siteName,
         sections: [
-          { component: 'HeroSimple', variant: 'simple', content: { headline: 'Sobre nós', breadcrumb: 'Início > Sobre' } },
-          { component: 'About', variant: 'simple', content: { title: 'Nossa história' } },
+          { component: 'HeroSimple', variant: 'simple', content: { title: 'Sobre nós', subtitle: pack.tagline } },
+          { component: 'About', variant: 'simple', content: { title: 'Nossa história', text: pack.aboutText } },
+          ...(pack.team && pack.team.length
+            ? [{ component: 'Team', variant: 'default', content: { title: 'Nosso time', items: pack.team } }]
+            : []),
           { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
         ],
       },
       {
         slug: '/servicos', name: 'Serviços', title: 'Serviços', description: 'Nossos serviços',
         sections: [
-          { component: 'HeroSimple', variant: 'simple', content: { headline: 'Serviços' } },
-          { component: 'Services', variant: 'grid', content: { title: 'Serviços', items: [] } },
+          { component: 'HeroSimple', variant: 'simple', content: { title: 'Serviços', subtitle: 'Conheça tudo o que podemos fazer por você' } },
+          { component: 'Services', variant: 'grid', content: { title: 'Serviços', items: pack.services } },
+          ...(pack.differentials && pack.differentials.length
+            ? [{ component: 'Differentials', variant: 'default', content: { title: 'Por que nos escolher', items: pack.differentials } }]
+            : []),
           { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
         ],
       },
       {
-        slug: '/contato', name: 'Contato', title: 'Contato', description: 'Fale com ' + siteName,
+        slug: '#contato', name: 'Contato', title: 'Contato', description: 'Fale com ' + siteName,
         sections: [
-          { component: 'HeroSimple', variant: 'simple', content: { headline: 'Contato' } },
-          { component: 'Contact', variant: 'simple', content: { title: 'Fale conosco' } },
+          { component: 'HeroSimple', variant: 'simple', content: { title: 'Contato', subtitle: 'Estamos prontos para te atender' } },
+          { component: 'Contact', variant: 'simple', content: { title: 'Fale conosco', whatsapp: pack.whatsapp, email: pack.email, address: pack.address } },
           { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
         ],
       },
     ],
     seo: {
-      siteUrl: 'https://' + lower.replace(/[^a-z0-9]+/g, '-') + '.com.br',
-      defaultDescription: siteName + ' — ' + 'soluções profissionais',
+      siteUrl: 'https://' + (lower || templateSlug) + '.com.br',
+      defaultDescription: pack.tagline,
       sitemap: true, robots: 'index, follow',
     },
     settings: {
-      whatsapp: '5511999999999',
-      phone: '(11) 0000-0000',
-      email: 'contato@' + lower.replace(/[^a-z0-9]+/g, '') + '.com',
-      address: 'Av. Paulista, 1000 — São Paulo/SP',
-      hours: 'Seg–Sex, 9h–18h',
-      cnpj: '00.000.000/0001-00',
-      social: { instagram: 'https://instagram.com/' + lower.replace(/[^a-z0-9]+/g, '') },
+      whatsapp: pack.whatsapp,
+      phone: pack.phone,
+      email: pack.email || ('contato@' + (lower || templateSlug) + '.com.br'),
+      address: pack.address || 'Av. Paulista, 1000 — São Paulo/SP',
+      hours: pack.hours || 'Seg–Sex, 9h–18h',
+      cnpj: pack.cnpj,
+      social: {
+        instagram: pack.instagram || ('https://instagram.com/' + (lower || templateSlug)),
+      },
     },
   });
 }

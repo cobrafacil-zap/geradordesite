@@ -401,7 +401,7 @@ export function siteRendererToHtml(site: Site): string {
   const t = site.theme || { colors: { primary: '#7c5cff', secondary: '#5b8bff', accent: '#7c5cff', background: '#0a0a0f', surface: '#111118', text: '#f5f5f7' }, fonts: { heading: 'Inter', body: 'Inter' } };
   const colors = (t as any).colors || ({} as any);
   const fonts = (t as any).fonts || { heading: 'Inter', body: 'Inter' };
-  const cssVars = `:root{--bg:${esc(colors.background || '#0a0a0f')};--bg-elev:${esc(colors.surface || '#111118')};--fg:${esc(colors.text || '#f5f5f7')};--accent:${esc(colors.primary || '#7c5cff')};--accent-glow:${esc(colors.secondary || '#5b8bff')};--font-heading:'${esc(fonts.heading || 'Inter')}',sans-serif;--font-body:'${esc(fonts.body || 'Inter')}',sans-serif}`;
+  const cssVars = `:root{--bg:${esc(colors.background || '#ffffff')};--bg-elev:${esc(colors.surface || '#f8fafc')};--fg:${esc(colors.text || '#0f172a')};--accent:${esc(colors.accent || colors.primary || '#7c5cff')};--accent-glow:${esc(colors.secondary || colors.accent || '#5b8bff')};--text-muted:${esc(colors.textMuted || '#64748b')};--text-dim:${esc(colors.textMuted || '#94a3b8')};--border:${esc(colors.border || '#e5e7eb')};--font-heading:'${esc(fonts.heading || 'Inter')}',sans-serif;--font-body:'${esc(fonts.body || 'Inter')}',sans-serif}`;
   const head = `
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -410,7 +410,7 @@ export function siteRendererToHtml(site: Site): string {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>:root{color-scheme:dark}html,body{background:var(--bg);color:var(--fg);font-family:var(--font-body)}.text-fg{color:var(--fg)}.text-fg-muted{color:#9b9ba3}.text-fg-dim{color:#5a5a64}.bg-bg{background:var(--bg)}.bg-bg-elev{background:var(--bg-elev)}.bg-accent{background:var(--accent)}.text-accent{color:var(--accent)}.border-accent{border-color:var(--accent)}.border-border{border-color:#22222c}.card-base{background:var(--bg-elev);border:1px solid #22222c;border-radius:14px;transition:border-color .2s}.btn-primary{background:var(--accent);color:white;padding:.5rem 1rem;border-radius:10px;font-weight:500;display:inline-block}img{max-width:100%;height:auto}a{color:inherit;text-decoration:none}${cssVars}}</style>
+    <style>:root{color-scheme:light}html,body{background:var(--bg);color:var(--fg);font-family:var(--font-body)}.text-fg{color:var(--fg)}.text-fg-muted{color:var(--text-muted)}.text-fg-dim{color:var(--text-dim)}.bg-bg{background:var(--bg)}.bg-bg-elev{background:var(--bg-elev)}.bg-accent{background:var(--accent)}.text-accent{color:var(--accent)}.border-accent{border-color:var(--accent)}.border-border{border-color:var(--border)}.card-base{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;transition:border-color .2s}.btn-primary{background:var(--accent);color:white;padding:.5rem 1rem;border-radius:10px;font-weight:500;display:inline-block}img{max-width:100%;height:auto}a{color:inherit;text-decoration:none}${cssVars}}</style>
   `;
   // Renderiza apenas a primeira página (home)
   const home = site.pages?.find((p) => p.slug === 'home') || site.pages?.[0];
