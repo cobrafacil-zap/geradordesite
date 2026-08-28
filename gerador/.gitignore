@@ -29,3 +29,5 @@ supabase/.temp
 # Gerados
 /public/uploads/
 /.tmp/
+.vercel
+.env*

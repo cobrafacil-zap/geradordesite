@@ -24,17 +24,33 @@ export default function LoginPage() {
       const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/signup';
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        redirect: 'manual', // nunca seguir redirect de middleware/proxy — queremos ver o status real
         body: JSON.stringify({ email, password, fullName: fullName || undefined }),
       });
-      const data = await res.json();
+      // redirect 30x vindo de middleware/proxy → tratar como falha
+      if (res.status >= 300 && res.status < 400) {
+        setError('Sessão expirada. Recarregue a página e tente novamente.');
+        return;
+      }
+      const text = await res.text();
+      let data: any = {};
+      if (text) {
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          try { data = JSON.parse(text); } catch { data = { error: `Resposta inválida do servidor (HTTP ${res.status})` }; }
+        } else {
+          // veio HTML (página de erro, redirect seguido, etc)
+          data = { error: `Resposta inesperada do servidor (HTTP ${res.status}). Tente novamente.` };
+        }
+      }
       if (!res.ok) {
-        setError(data.error || 'Falha na autenticação');
+        setError(data.error || `Falha na autenticação (HTTP ${res.status})`);
         toast.error(mode === 'login' ? 'Falha no login' : 'Falha no cadastro', data.error);
         return;
       }
       toast.success(mode === 'login' ? 'Bem-vindo de volta!' : 'Conta criada');
-      router.push('/');
+      router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
       setError(err?.message || 'Erro de rede');

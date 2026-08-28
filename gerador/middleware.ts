@@ -17,6 +17,7 @@ const PUBLIC_PATHS = [
   '/setup',
   '/auth/callback',
   '/auth/confirm',
+  '/api/auth', // login/signup/logout/callback — nunca redirecionar (são endpoints que o cliente chama)
   '/api/health',
   '/api/preview', // preview iframe (autenticação tratada no route handler)
 ];
