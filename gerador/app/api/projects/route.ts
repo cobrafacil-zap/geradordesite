@@ -89,11 +89,14 @@ export async function POST(req: NextRequest) {
         .single();
       if (vErr) return NextResponse.json({ error: vErr.message }, { status: 400 });
 
-      // Seta current_version_id
-      await supabase
+      // Seta current_version_id — confirma e propaga erro
+      const { error: uErr } = await supabase
         .from('projects')
         .update({ current_version_id: version.id })
         .eq('id', project.id);
+      if (uErr) {
+        return NextResponse.json({ error: `Projeto criado, mas falhou ao vincular versão inicial: ${uErr.message}` }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ ok: true, project });

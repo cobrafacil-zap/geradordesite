@@ -20,6 +20,7 @@ const PUBLIC_PATHS = [
   '/api/auth', // login/signup/logout/callback — nunca redirecionar (são endpoints que o cliente chama)
   '/api/health',
   '/api/preview', // preview iframe (autenticação tratada no route handler)
+  '/api/template-preview', // preview de modelos no /models (público, sem auth)
 ];
 
 function isPublic(pathname: string): boolean {

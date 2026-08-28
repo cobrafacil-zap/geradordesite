@@ -53,10 +53,20 @@ export default function EditorPage() {
   async function loadProject() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}`);
-      const data = await res.json();
+      // Tenta algumas vezes — projeto pode ter acabado de ser criado e o
+      // current_version_id ainda não ter sido propagado (race em POST /api/projects).
+      const MAX_ATTEMPTS = 5;
+      let res: Response | null = null;
+      let data: any = null;
+      for (let i = 0; i < MAX_ATTEMPTS; i++) {
+        res = await fetch(`/api/projects/${projectId}`);
+        data = await res.json();
+        if (res.ok && data.project?.project_versions?.schema_json) break;
+        if (res.status === 404) break; // projeto não existe, não adianta tentar
+        await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+      }
       // Modo dev sem Supabase → carrega schema de localStorage
-      if (!res.ok || data.error) {
+      if (!res || !res.ok || data?.error) {
         if (typeof window !== 'undefined') {
           const cached = localStorage.getItem(`gerador:project:${projectId}`);
           if (cached) {
@@ -249,10 +259,24 @@ export default function EditorPage() {
 
   if (!schema) {
     return (
-      <div className="p-8">
+      <div className="p-8 max-w-xl">
         <Card hover={false}>
-          <p className="text-fg-muted">Projeto sem schema. Volte ao dashboard.</p>
-          <Link href="/projects" className="btn-secondary mt-4 inline-block">Voltar</Link>
+          <h2 className="text-base font-semibold text-fg mb-1">Projeto sem schema</h2>
+          <p className="text-sm text-fg-muted mb-4">
+            Este projeto foi criado, mas a versão inicial ainda não foi gerada.
+            Isso pode acontecer se a sessão expirou no meio do processo ou se a
+            vinculação automática falhou. Tente recarregar a página em alguns
+            segundos; se persistir, apague este projeto e crie outro.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="btn-secondary text-sm"
+            >
+              Recarregar
+            </button>
+            <Link href="/projects" className="btn-secondary text-sm">Voltar ao dashboard</Link>
+          </div>
         </Card>
       </div>
     );

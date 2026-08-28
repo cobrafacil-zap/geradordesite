@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { Card, Badge, Input } from '@/components/ui';
-import { Icon } from '@/components/dashboard/sidebar';
+import { Input } from '@/components/ui';
+import { ModelCard } from './_components/ModelCard';
 
 const CATEGORIES = [
   { id: 'all', name: 'Todos' },
@@ -87,29 +86,7 @@ export default function ModelsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filtered.map((t) => (
-          <Card key={t.slug} className="overflow-hidden !p-0 group">
-            <div
-              className="aspect-[4/3] relative"
-              style={{ background: `linear-gradient(135deg, ${t.color}22 0%, ${t.color}66 100%)` }}
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-3xl border border-white/20">
-                  {t.emoji}
-                </div>
-              </div>
-              <Badge variant="default" className="absolute top-2 left-2">{t.tag}</Badge>
-            </div>
-            <div className="p-4">
-              <h3 className="text-sm font-semibold text-fg">{t.name}</h3>
-              <p className="text-xs text-fg-muted mt-0.5">/{t.slug}</p>
-              <Link
-                href={`/projects/new?template=${t.slug}`}
-                className="btn-primary w-full mt-3 text-xs py-2 flex items-center justify-center gap-1.5"
-              >
-                <Icon name="plus" size={12} /> Usar este modelo
-              </Link>
-            </div>
-          </Card>
+          <ModelCard key={t.slug} template={t} />
         ))}
       </div>
     </div>
