@@ -1,6 +1,5 @@
 {
   "framework": "nextjs",
-  "rootDirectory": "gerador",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
