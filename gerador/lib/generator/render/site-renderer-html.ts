@@ -310,19 +310,52 @@ function renderCases(section: Section): string {
 }
 
 function renderBlogList(section: Section): string {
-  const items = (section.content?.items || []) as Array<{ title: string; excerpt: string; date?: string }>;
+  const items = (section.content?.items || []) as Array<{ title: string; excerpt: string; date?: string; image?: string; tag?: string }>;
   return `
   <section class="py-16">
-    <div class="max-w-5xl mx-auto px-6">
-      <h2 class="text-3xl font-bold text-fg mb-8">${esc(pickContent(section, 'title', 'Blog'))}</h2>
+    <div class="max-w-6xl mx-auto px-6">
+      <h2 class="text-3xl font-bold text-fg mb-2">${esc(pickContent(section, 'title', 'Blog & Conteúdo'))}</h2>
+      ${pickContent(section, 'subtitle') ? `<p class="text-fg-muted mb-8">${esc(pickContent(section, 'subtitle'))}</p>` : ''}
       <div class="grid md:grid-cols-3 gap-4">
-        ${items.map((p) => `<article class="card-base p-5"><div class="text-xs text-fg-muted mb-2">${esc(p.date || '')}</div><h3 class="font-semibold text-fg mb-2">${esc(p.title)}</h3><p class="text-sm text-fg-muted">${esc(p.excerpt)}</p></article>`).join('')}
+        ${items.map((p) => `
+          <article class="card-base overflow-hidden">
+            ${p.image ? `<img src="${esc(p.image)}" alt="" class="w-full aspect-video object-cover" />` : ''}
+            <div class="p-5">
+              <div class="flex items-center gap-2 mb-2">
+                ${p.tag ? `<span class="text-[10px] uppercase tracking-wider text-accent">${esc(p.tag)}</span>` : ''}
+                ${p.date ? `<span class="text-xs text-fg-muted">${esc(p.date)}</span>` : ''}
+              </div>
+              <h3 class="font-semibold text-fg mb-2 leading-snug">${esc(p.title)}</h3>
+              <p class="text-sm text-fg-muted">${esc(p.excerpt)}</p>
+            </div>
+          </article>`).join('')}
       </div>
     </div>
   </section>`;
 }
 
-function renderProperties(section: Section): string { return renderProducts(section); }
+function renderProperties(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ name: string; price?: string; image?: string; desc?: string; tag?: string }>;
+  return `
+  <section class="py-16">
+    <div class="max-w-6xl mx-auto px-6">
+      <h2 class="text-3xl font-bold text-fg mb-2 text-center">${esc(pickContent(section, 'title', 'Imóveis'))}</h2>
+      ${pickContent(section, 'subtitle') ? `<p class="text-fg-muted text-center mb-8">${esc(pickContent(section, 'subtitle'))}</p>` : ''}
+      <div class="grid md:grid-cols-3 gap-4">
+        ${items.map((p) => `
+          <div class="card-base overflow-hidden">
+            ${p.image ? `<img src="${esc(p.image)}" alt="" class="w-full aspect-[4/3] object-cover" />` : ''}
+            <div class="p-4">
+              ${p.tag ? `<div class="text-[10px] uppercase tracking-wider text-accent mb-1">${esc(p.tag)}</div>` : ''}
+              <div class="font-semibold text-fg">${esc(p.name)}</div>
+              ${p.desc ? `<div class="text-sm text-fg-muted mt-1">${esc(p.desc)}</div>` : ''}
+              ${p.price ? `<div class="mt-2 text-accent font-bold">${esc(p.price)}</div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
 function renderPropertyList(section: Section): string { return renderProducts(section); }
 
 function renderMenuPreview(section: Section): string {
@@ -338,7 +371,29 @@ function renderMenuPreview(section: Section): string {
   </section>`;
 }
 
-function renderMenuFull(section: Section): string { return renderMenuPreview(section); }
+function renderMenuFull(section: Section): string {
+  // Aceita { categories: [{name, items: [...]}] } OU { items: [...] } (formato antigo)
+  const categories = (section.content?.categories as Array<{ name: string; items: Array<{ name: string; price: string; desc?: string }> }>) || [];
+  const flat = (section.content?.items || []) as Array<{ name: string; price: string; desc?: string }>;
+  const groups = categories.length ? categories : [{ name: 'Cardápio', items: flat }];
+  return `
+  <section class="py-16">
+    <div class="max-w-4xl mx-auto px-6">
+      <h2 class="text-3xl font-bold text-fg mb-2 text-center">${esc(pickContent(section, 'title', 'Cardápio completo'))}</h2>
+      ${pickContent(section, 'subtitle') ? `<p class="text-fg-muted text-center mb-10">${esc(pickContent(section, 'subtitle'))}</p>` : ''}
+      <div class="space-y-10">
+        ${groups.map((g) => `
+          <div>
+            <h3 class="text-xl font-semibold text-fg mb-4 border-b border-border pb-2">${esc(g.name)}</h3>
+            <div class="space-y-4">
+              ${g.items.map((m) => `<div class="flex items-baseline justify-between gap-4 border-b border-border/40 pb-3"><div><div class="font-medium text-fg">${esc(m.name)}</div>${m.desc ? `<div class="text-sm text-fg-muted mt-0.5">${esc(m.desc)}</div>` : ''}</div><div class="text-accent font-semibold whitespace-nowrap">${esc(m.price)}</div></div>`).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </section>`;
+}
 
 function renderReservation(section: Section): string {
   return `

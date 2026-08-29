@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getPack } from './templates/content/registry';
+import { buildHomeSections } from './templates/layouts';
 
 // ─────────────────────────────────────────────────────────────────
 // SiteSchema — fonte canônica de toda a estrutura de um site gerado.
@@ -164,58 +165,11 @@ export function siteSchemaForTemplate(templateSlug: string, tradeName: string): 
   const siteName = tradeName || pack.slug;
   const lower = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
-  // Home: Hero → Sobre → (Stats) → Serviços → (Diferenciais) →
-  // (Galeria | Menu | Produtos) → (Depoimentos) → (FAQ) → CTA
-  const homeSections: any[] = [
-    { component: 'Header', variant: 'sticky-dark', content: { whatsapp: pack.whatsapp } },
-    {
-      component: 'Hero',
-      variant: 'split',
-      content: {
-        eyebrow: pack.hero.eyebrow,
-        title: pack.hero.title,
-        subtitle: pack.hero.subtitle,
-        ctaLabel: pack.hero.ctaLabel,
-        ctaHref: pack.hero.ctaHref,
-        image: pack.hero.image,
-        imageAlt: pack.hero.imageAlt,
-      },
-    },
-    {
-      component: 'About',
-      variant: 'simple',
-      content: { title: 'Sobre nós', text: pack.aboutText },
-    },
-  ];
-
-  if (pack.stats && pack.stats.length) {
-    homeSections.push({ component: 'Stats', variant: 'default', content: { title: 'Nossos números', items: pack.stats } });
-  }
-
-  homeSections.push({ component: 'Services', variant: 'grid', content: { title: 'Serviços', items: pack.services } });
-
-  if (pack.differentials && pack.differentials.length) {
-    homeSections.push({ component: 'Differentials', variant: 'default', content: { title: 'Por que nos escolher', items: pack.differentials } });
-  }
-
-  if (pack.gallery && pack.gallery.length) {
-    homeSections.push({ component: 'Gallery', variant: 'grid', content: { title: 'Galeria', items: pack.gallery } });
-  } else if (pack.menu && pack.menu.length) {
-    homeSections.push({ component: 'MenuPreview', variant: 'simple', content: { title: 'Cardápio', items: pack.menu } });
-  } else if (pack.products && pack.products.length) {
-    homeSections.push({ component: 'Products', variant: 'grid', content: { title: 'Em destaque', items: pack.products } });
-  }
-
-  if (pack.testimonials && pack.testimonials.length) {
-    homeSections.push({ component: 'Testimonials', variant: 'default', content: { title: 'Depoimentos', items: pack.testimonials } });
-  }
-
-  if (pack.faq && pack.faq.length) {
-    homeSections.push({ component: 'FAQ', variant: 'default', content: { title: 'Perguntas frequentes', items: pack.faq } });
-  }
-
-  homeSections.push({ component: 'CTA', variant: 'centered', content: { title: pack.ctaTitle, ctaLabel: pack.ctaLabel, ctaHref: '#contato' } });
-  homeSections.push({ component: 'Footer', variant: 'simple', content: { floatingWa: true } });
+  // Home: estrutura montada por segmento (layouts.ts).
+  // Cada tipo de negócio tem uma ordem de seções própria — imobiliária abre
+  // com Properties, restaurante abre com MenuFull, fotógrafo abre com Gallery,
+  // etc. Isso evita o problema de todos os 30 sites seguirem a mesma sequência.
+  const homeSections: any[] = buildHomeSections(pack);
 
   return withDefaults({
     site: {
