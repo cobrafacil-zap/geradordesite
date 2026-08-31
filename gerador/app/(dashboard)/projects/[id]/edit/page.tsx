@@ -43,6 +43,9 @@ export default function EditorPage() {
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [previewKey, setPreviewKey] = useState(0);
+  // Guarda que startGeneration só roda uma vez por sessão de página,
+  // mesmo se loadProject for chamado várias vezes (autostart loop)
+  const startedRef = useRef(false);
 
   // Carrega projeto + schema
   useEffect(() => {
@@ -74,7 +77,10 @@ export default function EditorPage() {
               const s = JSON.parse(cached);
               setSchema(s);
               setOriginal(JSON.stringify(s));
-              if (autostart) startGeneration();
+              if (autostart && !startedRef.current) {
+            startedRef.current = true;
+            startGeneration();
+          }
               return;
             } catch {}
           }
@@ -89,7 +95,10 @@ export default function EditorPage() {
         if (typeof window !== 'undefined') {
           localStorage.setItem(`gerador:project:${projectId}`, JSON.stringify(s));
         }
-        if (autostart) startGeneration();
+        if (autostart && !startedRef.current) {
+            startedRef.current = true;
+            startGeneration();
+          }
       } else {
         setSchema(null);
       }
@@ -208,7 +217,8 @@ export default function EditorPage() {
       console.error(e);
     } finally {
       setGenerating(false);
-      // Recarrega schema gerado
+      // Recarrega schema gerado (sem disparar novo startGeneration)
+      startedRef.current = true;
       await loadProject();
     }
   }
