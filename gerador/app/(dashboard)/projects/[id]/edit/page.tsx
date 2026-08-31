@@ -660,20 +660,23 @@ function ThemeTab({ schema, onChange }: any) {
   function setMode(mode: 'light' | 'dark') {
     onChange((s: any) => {
       if (!s.theme) s.theme = { colors: {}, fonts: { heading: 'Inter', body: 'Inter' } };
+      if (!s.theme.colors) s.theme.colors = {};
       s.theme.style = mode === 'dark' ? 'dark-premium' : 'moderno';
-      // Aplica paleta pronta de acordo com o modo (cores inteligentes)
+      // Sobrescreve SEMPRE as cores de fundo/texto/borda ao trocar de modo —
+      // antes usávamos "||" que preservava a paleta existente, então clicar
+      // em Escuro num site Claro não mudava nada visualmente.
       if (mode === 'dark') {
-        s.theme.colors.background = s.theme.colors.background || '#0f172a';
-        s.theme.colors.text = s.theme.colors.text || '#f5fafd';
-        s.theme.colors.textMuted = s.theme.colors.textMuted || 'rgba(245,250,253,0.7)';
-        s.theme.colors.border = s.theme.colors.border || 'rgba(255,255,255,0.12)';
-        s.theme.colors.surface = s.theme.colors.surface || '#111118';
+        s.theme.colors.background = '#0f172a';
+        s.theme.colors.text = '#f5fafd';
+        s.theme.colors.textMuted = 'rgba(245,250,253,0.7)';
+        s.theme.colors.border = 'rgba(255,255,255,0.12)';
+        s.theme.colors.surface = '#111118';
       } else {
-        s.theme.colors.background = s.theme.colors.background || '#ffffff';
-        s.theme.colors.text = s.theme.colors.text || '#0f172a';
-        s.theme.colors.textMuted = s.theme.colors.textMuted || '#64748b';
-        s.theme.colors.border = s.theme.colors.border || '#e5e7eb';
-        s.theme.colors.surface = s.theme.colors.surface || '#f8fafc';
+        s.theme.colors.background = '#ffffff';
+        s.theme.colors.text = '#0f172a';
+        s.theme.colors.textMuted = '#64748b';
+        s.theme.colors.border = '#e5e7eb';
+        s.theme.colors.surface = '#f8fafc';
       }
     });
   }
