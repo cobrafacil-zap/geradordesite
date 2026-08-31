@@ -167,6 +167,14 @@ export default function EditorPage() {
           // Incrementa previewKey DEPOIS do save — assim o iframe só
           // recarrega com a nova URL quando o DB já tem o schema novo.
           setPreviewKey((k) => k + 1);
+          // Força reload duro do iframe também — backup caso o cache do
+          // navegador segure o iframe apesar do key ter mudado.
+          try {
+            const ifr = iframeRef.current;
+            if (ifr && ifr.contentWindow) {
+              ifr.contentWindow.location.reload();
+            }
+          } catch {}
         }
       } catch {}
     } finally {
@@ -412,7 +420,7 @@ export default function EditorPage() {
               <iframe
                 key={`${previewKey}-${selectedPageIdx}`}
                 ref={iframeRef}
-                src={`/api/preview/${projectId}?v=${previewKey}&pageIdx=${selectedPageIdx}&t=${Date.now()}`}
+                src={`/api/preview/${projectId}?v=${previewKey}&pageIdx=${selectedPageIdx}&ts=${previewKey}`}
                 className="w-full h-full bg-white"
                 title="Preview do site"
                 sandbox="allow-same-origin allow-scripts"
