@@ -14,9 +14,11 @@ export const ComponentNameSchema = z.enum([
   'Team', 'Testimonials', 'FAQ',
   'Gallery', 'MenuPreview', 'MenuFull', 'Reservation',
   'Properties', 'PropertyList',
-  'Products', 'ProductList', 'Cases',
+  'Products', 'ProductList', 'Cases', 'Process',
   'History', 'Map', 'BlogList', 'Legal',
   'CTA', 'Contact', 'Stats',
+  'Chef', 'Brands', 'Schedule', 'Instruments', 'Conventions',
+  'Highlights', 'Method', 'Press', 'Logos', 'Marquee',
 ]);
 export type ComponentName = z.infer<typeof ComponentNameSchema>;
 

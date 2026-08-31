@@ -71,12 +71,142 @@ function renderFooter(site: Site): string {
 }
 
 function renderHero(section: Section): string {
+  const variant = (section.variant || 'split').toLowerCase();
   const eyebrow = pickContent(section, 'eyebrow');
   const title = pickContent(section, 'title', 'Título principal');
   const subtitle = pickContent(section, 'subtitle', '');
   const ctaLabel = pickContent(section, 'ctaLabel', 'Fale conosco');
   const ctaHref = pickContent(section, 'ctaHref', '#contato');
   const image = pickContent(section, 'image');
+  const imageAlt = pickContent(section, 'imageAlt', '');
+
+  // ───────────────────────────────────────────────────────────
+  // 1) SPLIT — clássico corporativo: texto à esquerda, imagem à direita
+  // ───────────────────────────────────────────────────────────
+  if (variant === 'split' || variant === 'default') {
+    return `
+    <section class="py-20 md:py-28">
+      <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-10 items-center">
+        <div>
+          ${eyebrow ? `<div class="text-xs uppercase tracking-[0.2em] text-accent mb-3 font-semibold">${esc(eyebrow)}</div>` : ''}
+          <h1 class="text-4xl md:text-5xl font-bold text-fg leading-[1.1]">${esc(title)}</h1>
+          ${subtitle ? `<p class="mt-4 text-lg text-fg-muted leading-relaxed">${esc(subtitle)}</p>` : ''}
+          <div class="mt-6 flex gap-3 flex-wrap">
+            <a href="${esc(ctaHref)}" class="bg-accent text-white font-medium px-5 py-3 rounded-lg inline-block hover:opacity-90 transition">${esc(ctaLabel)}</a>
+          </div>
+        </div>
+        ${image ? `<div class="relative"><img src="${esc(image)}" alt="${esc(imageAlt)}" class="rounded-2xl shadow-2xl w-full" /></div>` : ''}
+      </div>
+    </section>`;
+  }
+
+  // ───────────────────────────────────────────────────────────
+  // 2) FULLBLEED — imagem de fundo cobrindo tudo, texto sobreposto
+  // (restaurante, pizzaria, fotógrafo, hotel, experiência)
+  // ───────────────────────────────────────────────────────────
+  if (variant === 'fullbleed') {
+    const bgImg = image ? `background-image:linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.7)),url('${esc(image)}');background-size:cover;background-position:center;` : '';
+    return `
+    <section class="relative min-h-[560px] flex items-end pb-16" style="${bgImg}background-color:var(--primary);">
+      <div class="relative max-w-6xl mx-auto px-6 w-full">
+        ${eyebrow ? `<div class="text-xs uppercase tracking-[0.3em] text-white/80 mb-3 font-semibold">${esc(eyebrow)}</div>` : ''}
+        <h1 class="text-4xl md:text-6xl font-bold text-white leading-[1.05] max-w-3xl" style="font-family:var(--font-display, var(--font-heading));">${esc(title)}</h1>
+        ${subtitle ? `<p class="mt-4 text-lg text-white/85 leading-relaxed max-w-2xl">${esc(subtitle)}</p>` : ''}
+        <div class="mt-6 flex gap-3 flex-wrap">
+          <a href="${esc(ctaHref)}" class="bg-white text-fg font-semibold px-6 py-3 rounded-lg inline-block hover:bg-white/90 transition">${esc(ctaLabel)}</a>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  // ───────────────────────────────────────────────────────────
+  // 3) CENTERED — texto centralizado em fundo branco (B2B, SaaS, agência)
+  // ───────────────────────────────────────────────────────────
+  if (variant === 'centered' || variant === 'centered-bold') {
+    return `
+    <section class="py-24 md:py-36 text-center" style="background:var(--bg-elev);">
+      <div class="max-w-4xl mx-auto px-6">
+        ${eyebrow ? `<div class="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent mb-4 font-semibold bg-accent/10 px-3 py-1 rounded-full">${esc(eyebrow)}</div>` : ''}
+        <h1 class="text-4xl md:text-6xl font-extrabold text-fg leading-[1.05]">${esc(title)}</h1>
+        ${subtitle ? `<p class="mt-5 text-lg md:text-xl text-fg-muted max-w-2xl mx-auto leading-relaxed">${esc(subtitle)}</p>` : ''}
+        <div class="mt-8 flex gap-3 justify-center flex-wrap">
+          <a href="${esc(ctaHref)}" class="bg-accent text-white font-semibold px-6 py-3 rounded-lg inline-block hover:opacity-90 transition shadow-lg shadow-accent/20">${esc(ctaLabel)}</a>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  // ───────────────────────────────────────────────────────────
+  // 4) DARK PREMIUM — fundo escuro sólido, tipografia serif elegante
+  // (luxo, boutique, construtora premium, escritório de advocacia)
+  // ───────────────────────────────────────────────────────────
+  if (variant === 'dark-premium' || variant === 'dark') {
+    return `
+    <section class="py-24 md:py-32" style="background:var(--primary);color:#fff;">
+      <div class="max-w-5xl mx-auto px-6">
+        <div class="grid md:grid-cols-[1fr,2fr] gap-10 items-end">
+          <div>
+            ${eyebrow ? `<div class="text-xs uppercase tracking-[0.3em] mb-3 font-semibold" style="color:var(--accent);">${esc(eyebrow)}</div>` : ''}
+            ${image ? `<img src="${esc(image)}" alt="${esc(imageAlt)}" class="w-full rounded shadow-2xl" style="border:1px solid rgba(255,255,255,0.15);" />` : ''}
+          </div>
+          <div>
+            <h1 class="text-4xl md:text-6xl font-bold leading-[1.05]" style="font-family:var(--font-display, var(--font-heading));font-weight:700;">${esc(title)}</h1>
+            ${subtitle ? `<p class="mt-5 text-lg leading-relaxed" style="color:rgba(255,255,255,0.78);">${esc(subtitle)}</p>` : ''}
+            <div class="mt-7 flex gap-3 flex-wrap">
+              <a href="${esc(ctaHref)}" class="font-semibold px-6 py-3 rounded inline-block transition hover:opacity-90" style="background:var(--accent);color:#fff;">${esc(ctaLabel)}</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  // ───────────────────────────────────────────────────────────
+  // 5) MAGAZINE — imagem grande à esquerda, texto à direita, sem bordas
+  // (imobiliária, arquitetura, interiores)
+  // ───────────────────────────────────────────────────────────
+  if (variant === 'magazine' || variant === 'image-left') {
+    return `
+    <section class="py-0">
+      <div class="grid md:grid-cols-5 gap-0">
+        <div class="md:col-span-2 relative" style="min-height:420px;${image ? `background-image:url('${esc(image)}');background-size:cover;background-position:center;` : 'background:var(--bg-elev);'}">
+        </div>
+        <div class="md:col-span-3 flex items-center py-16 md:py-20 px-8 md:px-14">
+          <div>
+            ${eyebrow ? `<div class="text-xs uppercase tracking-[0.25em] text-accent mb-4 font-semibold">${esc(eyebrow)}</div>` : ''}
+            <h1 class="text-4xl md:text-5xl font-bold text-fg leading-[1.1]" style="font-family:var(--font-display, var(--font-heading));">${esc(title)}</h1>
+            ${subtitle ? `<p class="mt-5 text-lg text-fg-muted leading-relaxed max-w-xl">${esc(subtitle)}</p>` : ''}
+            <div class="mt-7 flex gap-3 flex-wrap">
+              <a href="${esc(ctaHref)}" class="bg-accent text-white font-medium px-5 py-3 rounded-none inline-block hover:opacity-90 transition">${esc(ctaLabel)}</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  // ───────────────────────────────────────────────────────────
+  // 6) CARD-INFORMATIVO — texto em card branco sobre fundo colorido
+  // (emergenciais 24h, imobiliária popular, serviços urgentes)
+  // ───────────────────────────────────────────────────────────
+  if (variant === 'card-informativo' || variant === 'alert') {
+    return `
+    <section class="py-20 md:py-28" style="background:var(--accent);">
+      <div class="max-w-5xl mx-auto px-6 grid md:grid-cols-2 gap-8 items-center">
+        <div class="bg-white p-8 md:p-10 rounded-2xl shadow-2xl">
+          ${eyebrow ? `<div class="inline-block text-xs uppercase tracking-[0.2em] font-bold px-3 py-1 rounded-full mb-4" style="background:var(--accent);color:#fff;">${esc(eyebrow)}</div>` : ''}
+          <h1 class="text-3xl md:text-4xl font-extrabold text-fg leading-tight">${esc(title)}</h1>
+          ${subtitle ? `<p class="mt-4 text-base text-fg-muted leading-relaxed">${esc(subtitle)}</p>` : ''}
+          <div class="mt-6 flex gap-3 flex-wrap">
+            <a href="${esc(ctaHref)}" class="font-bold px-6 py-3 rounded-lg inline-block text-white transition hover:opacity-90" style="background:var(--primary);">${esc(ctaLabel)}</a>
+          </div>
+        </div>
+        ${image ? `<div class="hidden md:block"><img src="${esc(image)}" alt="${esc(imageAlt)}" class="rounded-2xl shadow-xl w-full" /></div>` : ''}
+      </div>
+    </section>`;
+  }
+
+  // fallback: split
   return `
   <section class="py-20 md:py-28">
     <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-10 items-center">
@@ -84,9 +214,7 @@ function renderHero(section: Section): string {
         ${eyebrow ? `<div class="text-xs uppercase tracking-wider text-accent mb-3">${esc(eyebrow)}</div>` : ''}
         <h1 class="text-4xl md:text-5xl font-bold text-fg leading-tight">${esc(title)}</h1>
         ${subtitle ? `<p class="mt-4 text-lg text-fg-muted">${esc(subtitle)}</p>` : ''}
-        <div class="mt-6 flex gap-3">
-          <a href="${esc(ctaHref)}" class="bg-accent text-white font-medium px-5 py-3 rounded-lg inline-block">${esc(ctaLabel)}</a>
-        </div>
+        <a href="${esc(ctaHref)}" class="mt-6 bg-accent text-white font-medium px-5 py-3 rounded-lg inline-block">${esc(ctaLabel)}</a>
       </div>
       ${image ? `<div><img src="${esc(image)}" alt="" class="rounded-2xl shadow-2xl w-full" /></div>` : ''}
     </div>
@@ -405,9 +533,191 @@ function renderReservation(section: Section): string {
           <input type="text" placeholder="Nome" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm" />
           <input type="date" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm" />
           <input type="time" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm" />
-          <input type="number" placeholder="Pessoas" min="1" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm" />
-          <button type="button" class="w-full bg-accent text-white py-2.5 rounded-lg font-medium">Reservar</button>
+          <input type="number" placeholder="Pessoas" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm" />
+          <button class="w-full bg-accent text-white font-semibold py-3 rounded-lg">Confirmar reserva</button>
         </form>
+      </div>
+    </div>
+  </section>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Seções específicas por segmento — cada uma tem visual próprio
+// ─────────────────────────────────────────────────────────────────
+
+function renderChef(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ name: string; role: string; photo?: string; bio?: string }>;
+  return `
+  <section class="py-16" style="background:var(--bg-elev);">
+    <div class="max-w-6xl mx-auto px-6">
+      <h2 class="text-3xl font-bold text-fg mb-10 text-center">${esc(pickContent(section, 'title', 'Nosso time'))}</h2>
+      <div class="grid md:grid-cols-3 gap-6">
+        ${items.map(it => `
+          <div class="card-base overflow-hidden">
+            <div style="background:var(--accent);height:160px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:48px;">${it.photo ? `<img src="${esc(it.photo)}" alt="${esc(it.name)}" style="width:100%;height:100%;object-fit:cover;" />` : '👨‍🍳'}</div>
+            <div class="p-4">
+              <h3 class="font-bold text-fg">${esc(it.name)}</h3>
+              <p class="text-xs text-accent mt-0.5">${esc(it.role)}</p>
+              ${it.bio ? `<p class="text-sm text-fg-muted mt-2">${esc(it.bio)}</p>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderBrands(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ name: string; logo?: string }>;
+  return `
+  <section class="py-12" style="background:var(--primary);">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <p class="text-xs uppercase tracking-[0.3em] text-white/60 mb-6 font-semibold">${esc(pickContent(section, 'title', 'Trabalhamos com'))}</p>
+      <div class="flex flex-wrap justify-center gap-x-10 gap-y-4 items-center">
+        ${items.map(it => `<div class="text-white/80 font-bold text-lg tracking-wide">${esc(it.name)}</div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderSchedule(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ day: string; hours: string }>;
+  return `
+  <section class="py-16">
+    <div class="max-w-3xl mx-auto px-6">
+      <h2 class="text-3xl font-bold text-fg mb-8 text-center">${esc(pickContent(section, 'title', 'Horários'))}</h2>
+      <div class="card-base divide-y divide-border">
+        ${items.map(it => `
+          <div class="flex justify-between items-center px-5 py-3">
+            <span class="font-medium text-fg">${esc(it.day)}</span>
+            <span class="text-fg-muted">${esc(it.hours)}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderInstruments(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ name: string; tag?: string }>;
+  return `
+  <section class="py-16" style="background:var(--primary);color:#fff;">
+    <div class="max-w-6xl mx-auto px-6">
+      <h2 class="text-3xl font-bold mb-10 text-center" style="font-family:var(--font-display, var(--font-heading));">${esc(pickContent(section, 'title', 'Equipamentos'))}</h2>
+      <div class="grid md:grid-cols-4 gap-4">
+        ${items.map(it => `
+          <div class="p-4 rounded-lg" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);">
+            <div class="text-xs uppercase tracking-wider" style="color:var(--accent);">${esc(it.tag || 'Pro')}</div>
+            <div class="font-semibold mt-1">${esc(it.name)}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderConventions(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ name: string }>;
+  return `
+  <section class="py-12">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <p class="text-xs uppercase tracking-[0.3em] text-fg-muted mb-5 font-semibold">${esc(pickContent(section, 'title', 'Convênios'))}</p>
+      <div class="flex flex-wrap justify-center gap-3">
+        ${items.map(it => `<span class="px-4 py-2 rounded-full text-sm font-medium" style="background:var(--bg-elev);color:var(--fg);border:1px solid var(--border);">${esc(it.name)}</span>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderHighlights(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ title: string; desc: string; icon?: string }>;
+  return `
+  <section class="py-16">
+    <div class="max-w-6xl mx-auto px-6">
+      <h2 class="text-3xl font-bold text-fg mb-3 text-center">${esc(pickContent(section, 'title', 'Diferenciais'))}</h2>
+      ${pickContent(section, 'subtitle') ? `<p class="text-center text-fg-muted mb-10">${esc(pickContent(section, 'subtitle'))}</p>` : ''}
+      <div class="grid md:grid-cols-2 gap-4">
+        ${items.map(it => `
+          <div class="card-base p-6 flex gap-4">
+            <div class="text-3xl">${it.icon || '★'}</div>
+            <div>
+              <h3 class="font-bold text-fg">${esc(it.title)}</h3>
+              <p class="text-sm text-fg-muted mt-1">${esc(it.desc)}</p>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderMethod(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ step: string; title: string; desc: string }>;
+  return `
+  <section class="py-16" style="background:var(--bg-elev);">
+    <div class="max-w-5xl mx-auto px-6">
+      <h2 class="text-3xl font-bold text-fg mb-10 text-center">${esc(pickContent(section, 'title', 'Nosso método'))}</h2>
+      <div class="grid md:grid-cols-4 gap-4">
+        ${items.map((it, i) => `
+          <div class="relative card-base p-5">
+            <div class="text-4xl font-extrabold text-accent/40 mb-2">${String(i + 1).padStart(2, '0')}</div>
+            <h3 class="font-bold text-fg">${esc(it.title)}</h3>
+            <p class="text-sm text-fg-muted mt-2">${esc(it.desc)}</p>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderPress(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ name: string; quote?: string }>;
+  return `
+  <section class="py-12" style="background:var(--primary);color:#fff;">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <p class="text-xs uppercase tracking-[0.3em] mb-6 font-semibold" style="color:var(--accent);">${esc(pickContent(section, 'title', 'Quem falou de nós'))}</p>
+      <div class="flex flex-wrap justify-center gap-6">
+        ${items.map(it => `<span class="text-white/90 font-bold text-lg tracking-wide italic" style="font-family:var(--font-display, var(--font-heading));">${esc(it.name)}</span>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderLogos(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ name: string }>;
+  return `
+  <section class="py-10 border-y border-border">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="flex flex-wrap justify-around items-center gap-6">
+        ${items.map(it => `<div class="text-fg-muted font-bold text-lg tracking-wide opacity-70">${esc(it.name)}</div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderMarquee(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ text: string }>;
+  const repeated = [...items, ...items, ...items];
+  const inner = repeated.map(it => `<span class="text-white font-bold text-lg tracking-wide">${esc(it.text)}</span>`).join('');
+  const styleTag = '<style>@keyframes marquee{0%{transform:translateX(0);}100%{transform:translateX(-33.33%);}}</style>';
+  return `
+  <section class="py-6 overflow-hidden" style="background:var(--accent);">
+    <div class="flex gap-12 whitespace-nowrap" style="animation: marquee 30s linear infinite;">
+      ${inner}
+    </div>
+  </section>` + styleTag;
+}
+
+function renderProcess(section: Section): string {
+  const items = (section.content?.items || []) as Array<{ title: string; desc: string }>;
+  return `
+  <section class="py-16">
+    <div class="max-w-5xl mx-auto px-6">
+      <h2 class="text-3xl font-bold text-fg mb-10 text-center">${esc(pickContent(section, 'title', 'Como trabalhamos'))}</h2>
+      <div class="space-y-4">
+        ${items.map((it, i) => `
+          <div class="flex gap-5 items-start card-base p-5">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold flex-shrink-0" style="background:var(--accent);color:#fff;">${i + 1}</div>
+            <div class="flex-1">
+              <h3 class="font-bold text-fg text-lg">${esc(it.title)}</h3>
+              <p class="text-fg-muted mt-1">${esc(it.desc)}</p>
+            </div>
+          </div>`).join('')}
       </div>
     </div>
   </section>`;
@@ -441,6 +751,18 @@ const RENDERERS: Record<string, (s: Section) => string> = {
   MenuPreview: renderMenuPreview,
   MenuFull: renderMenuFull,
   Reservation: renderReservation,
+  // Novas seções específicas por segmento
+  Chef: renderChef,
+  Brands: renderBrands,
+  Schedule: renderSchedule,
+  Instruments: renderInstruments,
+  Conventions: renderConventions,
+  Highlights: renderHighlights,
+  Method: renderMethod,
+  Press: renderPress,
+  Logos: renderLogos,
+  Marquee: renderMarquee,
+  Process: renderProcess,
 };
 
 function renderSection(s: Section): string {
