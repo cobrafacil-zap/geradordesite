@@ -96,7 +96,27 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 
   try {
-    const html = siteRendererToHtml(version.schema_json);
+    const url = new URL(req.url);
+    // Aceita ?page=slug OU ?pageIdx=N (0-based). Default: primeira página.
+    const pageParam = url.searchParams.get('page');
+    const pageIdxParam = url.searchParams.get('pageIdx');
+    const pages: any[] = Array.isArray((version.schema_json as any)?.pages)
+      ? (version.schema_json as any).pages
+      : [];
+    let opts: { pageIdx?: number; pageSlug?: string } | undefined;
+    if (pageIdxParam != null && pageIdxParam !== '') {
+      const idx = parseInt(pageIdxParam, 10);
+      if (!isNaN(idx) && idx >= 0 && idx < pages.length) opts = { pageIdx: idx };
+    } else if (pageParam) {
+      // se for dígito puro, trata como idx também
+      if (/^\d+$/.test(pageParam)) {
+        const idx = parseInt(pageParam, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < pages.length) opts = { pageIdx: idx };
+      } else {
+        opts = { pageSlug: pageParam };
+      }
+    }
+    const html = siteRendererToHtml(version.schema_json, opts);
     return htmlResponse(html);
   } catch (err: any) {
     const html = buildPlaceholder(

@@ -774,7 +774,7 @@ function renderSection(s: Section): string {
   }
 }
 
-export function siteRendererToHtml(site: Site): string {
+export function siteRendererToHtml(site: Site, opts?: { pageIdx?: number; pageSlug?: string }): string {
   const t = site.theme || { colors: { primary: '#7c5cff', secondary: '#5b8bff', accent: '#7c5cff', background: '#0a0a0f', surface: '#111118', text: '#f5f5f7' }, fonts: { heading: 'Inter', body: 'Inter' } };
   const colors = (t as any).colors || ({} as any);
   const fonts = (t as any).fonts || { heading: 'Inter', body: 'Inter' };
@@ -794,8 +794,18 @@ export function siteRendererToHtml(site: Site): string {
     <script src="https://cdn.tailwindcss.com"></script>
     <style>:root{color-scheme:${isDark ? 'dark' : 'light'}}html,body{background:var(--bg);color:var(--fg);font-family:var(--font-body)}.text-fg{color:var(--fg)}.text-fg-muted{color:var(--text-muted)}.text-fg-dim{color:var(--text-dim)}.bg-bg{background:var(--bg)}.bg-bg-elev{background:var(--bg-elev)}.bg-accent{background:var(--accent)}.text-accent{color:var(--accent)}.border-accent{border-color:var(--accent)}.border-border{border-color:var(--border)}.card-base{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;transition:border-color .2s}.btn-primary{background:var(--accent);color:#ffffff;padding:.5rem 1rem;border-radius:10px;font-weight:500;display:inline-block}img{max-width:100%;height:auto}a{color:inherit;text-decoration:none}${cssVars}}</style>
   `;
-  // Renderiza apenas a primeira página (home)
-  const home = site.pages?.find((p) => p.slug === 'home') || site.pages?.[0];
+  // Seleciona a página a renderizar. Por padrão: 'home' ou a primeira.
+  // Aceita pageIdx (0-based) ou pageSlug vindos do caller.
+  const pages = site.pages || [];
+  let page = pages[0];
+  if (opts?.pageIdx != null && pages[opts.pageIdx]) {
+    page = pages[opts.pageIdx];
+  } else if (opts?.pageSlug) {
+    page = pages.find((p) => p.slug === opts.pageSlug) || page;
+  } else {
+    page = pages.find((p) => p.slug === 'home') || pages[0];
+  }
+  const home = page;
   if (!home) {
     return `<!doctype html><html><head>${head}</head><body><div class="min-h-screen flex items-center justify-center text-fg-muted">Nenhuma página definida.</div></body></html>`;
   }
