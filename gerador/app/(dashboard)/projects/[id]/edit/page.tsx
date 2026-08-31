@@ -129,13 +129,20 @@ export default function EditorPage() {
 
   function updateSchema(mutator: (s: any) => void) {
     if (!schema) return;
+    // Garante estrutura mínima — evita que mutações quebrem em undefined
     const next = structuredClone(schema);
+    if (!next.site) next.site = { name: '' };
+    if (!next.theme) next.theme = { colors: {}, fonts: { heading: 'Inter', body: 'Inter' } };
+    if (!next.theme.colors) next.theme.colors = {};
+    if (!next.theme.fonts) next.theme.fonts = { heading: 'Inter', body: 'Inter' };
+    if (!next.settings) next.settings = { social: {} };
+    if (!next.settings.social) next.settings.social = {};
+    if (!next.pages) next.pages = [];
+    if (!next.pages[selectedPageIdx]) next.pages[selectedPageIdx] = { slug: '/', name: 'Início', title: '', description: '', sections: [] };
+    if (!next.pages[selectedPageIdx].sections) next.pages[selectedPageIdx].sections = [];
     mutator(next);
     setSchema(next);
     autosave(next);
-    // NÃO incrementamos previewKey aqui — o iframe só deve recarregar
-    // DEPOIS que o PATCH completar e o DB tiver o schema novo.
-    // O reload é disparado dentro de doSave() após o 200 OK.
   }
 
   async function doSave(s: any) {
@@ -429,19 +436,19 @@ export default function EditorPage() {
 
 /* ── TAB: Conteúdo ───────────────────────────────────────────── */
 function ContentTab({ schema, pageIdx, onChange }: any) {
-  const page = schema.pages[pageIdx];
+  const page = schema.pages?.[pageIdx] || { slug: '/', title: '', description: '' };
   return (
     <div className="space-y-5">
       <h3 className="font-semibold text-fg">Identidade</h3>
       <Input label="Nome do site" value={schema.site?.name || ''} onChange={(e) => onChange((s: any) => { s.site.name = e.target.value; })} />
-      <Textarea label="Descrição" value={schema.site?.description || ''} onChange={(e) => onChange((s: any) => { s.site.description = e.target.value; })} rows={2} />
+      <Textarea label="Descrição" value={schema.site?.description || schema.site?.slogan || ''} onChange={(e) => onChange((s: any) => { s.site.description = e.target.value; })} rows={2} />
 
       <h3 className="font-semibold text-fg pt-2">Página: /{page.slug}</h3>
       <Input label="Título (H1)" value={page.title || ''} onChange={(e) => onChange((s: any) => { s.pages[pageIdx].title = e.target.value; })} />
       <Textarea label="Meta descrição" value={page.description || ''} onChange={(e) => onChange((s: any) => { s.pages[pageIdx].description = e.target.value; })} rows={2} />
 
       <h3 className="font-semibold text-fg pt-2">Contato</h3>
-      <Input label="WhatsApp" value={schema.settings?.whatsapp || ''} onChange={(e) => onChange((s: any) => { s.settings.whatsapp = e.target.value; })} hint="Formato: 5511999999999" />
+      <Input label="WhatsApp" value={schema.settings?.whatsapp || ''} onChange={(e) => onChange((s: any) => { s.settings.whatsapp = e.target.value.replace(/\D/g, ''); })} hint="Formato: 5511999999999" />
       <Input label="Telefone" value={schema.settings?.phone || ''} onChange={(e) => onChange((s: any) => { s.settings.phone = e.target.value; })} />
       <Input label="Email" value={schema.settings?.email || ''} onChange={(e) => onChange((s: any) => { s.settings.email = e.target.value; })} />
       <Input label="Endereço" value={schema.settings?.address || ''} onChange={(e) => onChange((s: any) => { s.settings.address = e.target.value; })} />
@@ -635,15 +642,79 @@ function ThemeTab({ schema, onChange }: any) {
   const theme = schema.theme || { colors: {}, fonts: { heading: 'Inter', body: 'Inter' } };
   const colors = theme.colors || {};
   const fonts = theme.fonts || { heading: 'Inter', body: 'Inter' };
+  const isDark = theme.style === 'dark-premium';
   function setColor(k: string, v: string) {
-    onChange((s: any) => { s.theme.colors[k] = v; });
+    onChange((s: any) => {
+      if (!s.theme) s.theme = { colors: {}, fonts: { heading: 'Inter', body: 'Inter' } };
+      if (!s.theme.colors) s.theme.colors = {};
+      s.theme.colors[k] = v;
+    });
   }
   function setFont(k: string, v: string) {
-    onChange((s: any) => { s.theme.fonts[k] = v; });
+    onChange((s: any) => {
+      if (!s.theme) s.theme = { colors: {}, fonts: { heading: 'Inter', body: 'Inter' } };
+      if (!s.theme.fonts) s.theme.fonts = { heading: 'Inter', body: 'Inter' };
+      s.theme.fonts[k] = v;
+    });
+  }
+  function setMode(mode: 'light' | 'dark') {
+    onChange((s: any) => {
+      if (!s.theme) s.theme = { colors: {}, fonts: { heading: 'Inter', body: 'Inter' } };
+      s.theme.style = mode === 'dark' ? 'dark-premium' : 'moderno';
+      // Aplica paleta pronta de acordo com o modo (cores inteligentes)
+      if (mode === 'dark') {
+        s.theme.colors.background = s.theme.colors.background || '#0f172a';
+        s.theme.colors.text = s.theme.colors.text || '#f5fafd';
+        s.theme.colors.textMuted = s.theme.colors.textMuted || 'rgba(245,250,253,0.7)';
+        s.theme.colors.border = s.theme.colors.border || 'rgba(255,255,255,0.12)';
+        s.theme.colors.surface = s.theme.colors.surface || '#111118';
+      } else {
+        s.theme.colors.background = s.theme.colors.background || '#ffffff';
+        s.theme.colors.text = s.theme.colors.text || '#0f172a';
+        s.theme.colors.textMuted = s.theme.colors.textMuted || '#64748b';
+        s.theme.colors.border = s.theme.colors.border || '#e5e7eb';
+        s.theme.colors.surface = s.theme.colors.surface || '#f8fafc';
+      }
+    });
   }
   return (
     <div className="space-y-5">
-      <h3 className="font-semibold text-fg">Cores</h3>
+      {/* Toggle Claro / Escuro */}
+      <div>
+        <h3 className="font-semibold text-fg mb-2">Modo do site</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setMode('light')}
+            className={`px-3 py-3 rounded-lg border text-sm font-medium transition ${!isDark ? 'border-accent bg-accent/10 text-fg' : 'border-border bg-bg-elev text-fg-muted hover:text-fg'}`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">☀️</span>
+              <span>Claro</span>
+            </div>
+            <div className="mt-1 flex h-3 rounded overflow-hidden">
+              <div className="flex-1 bg-white border-r border-border"></div>
+              <div className="flex-1 bg-slate-200"></div>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('dark')}
+            className={`px-3 py-3 rounded-lg border text-sm font-medium transition ${isDark ? 'border-accent bg-accent/10 text-fg' : 'border-border bg-bg-elev text-fg-muted hover:text-fg'}`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🌙</span>
+              <span>Escuro</span>
+            </div>
+            <div className="mt-1 flex h-3 rounded overflow-hidden">
+              <div className="flex-1 bg-slate-900 border-r border-border"></div>
+              <div className="flex-1 bg-slate-700"></div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <h3 className="font-semibold text-fg pt-2">Cores</h3>
       {[
         { k: 'primary', label: 'Primária' },
         { k: 'secondary', label: 'Secundária' },

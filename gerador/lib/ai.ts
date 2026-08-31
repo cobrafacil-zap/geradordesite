@@ -48,16 +48,19 @@ export async function callOpenAI(opts: AiCallOptions): Promise<string> {
 /** Alias semântico (mantido para retrocompatibilidade com imports existentes). */
 export const callGemini = callOpenAI;
 
+let lastErr = '';
+
 /** Extrai JSON de uma resposta (mesmo se vier com markdown ou ruído em volta). */
 export function extractJson<T>(raw: string, schema: z.ZodType<T>): T {
+  lastErr = '';
   // Tenta match direto
   try {
     return schema.parse(JSON.parse(raw));
-  } catch {}
+  } catch (e: any) { lastErr = `parse: ${e?.message?.slice(0, 200)}`; }
   // Tenta extrair bloco ```json ... ```
   const m = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (m) {
-    try { return schema.parse(JSON.parse(m[1])); } catch {}
+    try { return schema.parse(JSON.parse(m[1])); } catch (e: any) { lastErr = `block: ${e?.message?.slice(0, 200)}`; }
   }
   // Tenta primeiro { ... } balanceado
   const start = raw.indexOf('{');
@@ -68,10 +71,10 @@ export function extractJson<T>(raw: string, schema: z.ZodType<T>): T {
       else if (raw[i] === '}') {
         depth--;
         if (depth === 0) {
-          try { return schema.parse(JSON.parse(raw.slice(start, i + 1))); } catch { break; }
+          try { return schema.parse(JSON.parse(raw.slice(start, i + 1))); } catch (e: any) { lastErr = `slice: ${e?.message?.slice(0, 200)}`; break; }
         }
       }
     }
   }
-  throw new Error('Resposta da IA não contém JSON válido.');
+  throw new Error(`Resposta da IA não contém JSON válido. ${lastErr || ''}`);
 }
