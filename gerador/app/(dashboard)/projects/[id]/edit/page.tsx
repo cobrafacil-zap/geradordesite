@@ -133,7 +133,9 @@ export default function EditorPage() {
     mutator(next);
     setSchema(next);
     autosave(next);
-    setPreviewKey((k) => k + 1);
+    // NÃO incrementamos previewKey aqui — o iframe só deve recarregar
+    // DEPOIS que o PATCH completar e o DB tiver o schema novo.
+    // O reload é disparado dentro de doSave() após o 200 OK.
   }
 
   async function doSave(s: any) {
@@ -145,7 +147,8 @@ export default function EditorPage() {
           localStorage.setItem(`gerador:project:${projectId}`, JSON.stringify(s));
         } catch {}
       }
-      // 2) Tenta persistir no Supabase (silencioso se falhar)
+      // 2) Tenta persistir no Supabase. Só recarrega o iframe APÓS o 200 OK
+      //    para garantir que o DB tem o schema novo antes do preview buscar.
       try {
         const res = await fetch(`/api/projects/${projectId}`, {
           method: 'PATCH',
@@ -154,6 +157,9 @@ export default function EditorPage() {
         });
         if (res.ok) {
           setSavedAt(new Date());
+          // Incrementa previewKey DEPOIS do save — assim o iframe só
+          // recarrega com a nova URL quando o DB já tem o schema novo.
+          setPreviewKey((k) => k + 1);
         }
       } catch {}
     } finally {
