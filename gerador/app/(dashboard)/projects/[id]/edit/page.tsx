@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button, Input, Textarea, Card, Badge, Spinner, Select, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import { Icon } from '@/components/dashboard/sidebar';
+import { siteRendererToHtml } from '@/lib/generator/render/site-renderer-html';
 
 type TabId = 'content' | 'sections' | 'theme' | 'seo' | 'ai';
 
@@ -46,12 +47,34 @@ export default function EditorPage() {
   // Guarda que startGeneration só roda uma vez por sessão de página,
   // mesmo se loadProject for chamado várias vezes (autostart loop)
   const startedRef = useRef(false);
+  // srcDoc do iframe — recalculado localmente a cada edição. Vantagem:
+  // atualização IMEDIATA do preview sem depender do PATCH/Supabase/cache.
+  // O PATCH continua salvando no banco; o iframe só usa o que o client tem.
+  const [previewSrcDoc, setPreviewSrcDoc] = useState<string>('');
 
   // Carrega projeto + schema
   useEffect(() => {
     loadProject();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  // Recalcula o HTML do preview localmente a cada edição.
+  // Resolve o bug "mudei tema mas preview continua com cores antigas":
+  // antes dependíamos do PATCH + reload do iframe (que tinha cache de
+  // banco, race conditions, etc). Agora o preview reflete o schema
+  // do client imediatamente.
+  useEffect(() => {
+    if (!schema) {
+      setPreviewSrcDoc('');
+      return;
+    }
+    try {
+      const html = siteRendererToHtml(schema, { pageIdx: selectedPageIdx });
+      setPreviewSrcDoc(html);
+    } catch (e) {
+      console.error('preview render error', e);
+    }
+  }, [schema, selectedPageIdx, previewKey]);
 
   async function loadProject() {
     setLoading(true);
@@ -420,7 +443,8 @@ export default function EditorPage() {
               <iframe
                 key={`${previewKey}-${selectedPageIdx}`}
                 ref={iframeRef}
-                src={`/api/preview/${projectId}?v=${previewKey}&pageIdx=${selectedPageIdx}&ts=${previewKey}`}
+                srcDoc={previewSrcDoc || undefined}
+                src={previewSrcDoc ? undefined : `/api/preview/${projectId}?v=${previewKey}&pageIdx=${selectedPageIdx}&ts=${previewKey}`}
                 className="w-full h-full bg-white"
                 title="Preview do site"
                 sandbox="allow-same-origin allow-scripts"

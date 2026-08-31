@@ -816,7 +816,7 @@ export function siteRendererToHtml(site: Site, opts?: { pageIdx?: number; pageSl
     </main>
     ${renderFooter(site)}
   `;
-  return `<!doctype html><html lang="pt-BR"${isDark ? ' class="dark"' : ''}><head>${head}</head><body>${body}</body></html>`;
+  return `<!doctype html><html lang="pt-BR"${isDark ? ' class="dark"' : ''}><head>${head}</head><body>${body}<!--preview-debug:style=${esc((t as any).style || 'none')};bg=${esc(colors.background || 'none')};fg=${esc(colors.text || 'none')};dark=${isDark}--></body></html>`;
 }
 
 // ─────────────────────────────────────────────────────────────────
