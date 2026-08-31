@@ -235,6 +235,7 @@ export const GROUP_5: Record<string, ContentPack> = {
   fotografo: {
     slug: 'fotografo',
     tagline: 'Casamentos, eventos e ensaios autorais — a foto que sua família vai olhar daqui a 30 anos.',
+    mode: 'dark',
     palette: { primary: '#0a0a0a', secondary: '#334155', accent: '#0f172a', surface: '#f8fafc' },
     hero: {
       eyebrow: 'Casamentos · Eventos · Ensaios autorais',

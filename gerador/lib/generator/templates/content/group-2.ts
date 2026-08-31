@@ -143,6 +143,7 @@ export const GROUP_2: Record<string, ContentPack> = {
   'escritorio-advocacia': {
     slug: 'escritorio-advocacia',
     tagline: 'Advocacia B2B séria, mas sem o juridiquês que ninguém aguenta.',
+    mode: 'dark',
     palette: {
       primary: '#1c0a2e',
       secondary: '#581c87',

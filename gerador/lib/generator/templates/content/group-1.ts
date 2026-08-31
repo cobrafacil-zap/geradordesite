@@ -183,6 +183,7 @@ export const GROUP_1: Record<string, ContentPack> = {
   'empresa-premium': {
     slug: 'empresa-premium',
     tagline: 'Para quem não procura — escolhe.',
+    mode: 'dark',
     palette: {
       primary: '#1c1917',
       secondary: '#a16207',

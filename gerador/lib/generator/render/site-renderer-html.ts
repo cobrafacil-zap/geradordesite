@@ -779,6 +779,11 @@ export function siteRendererToHtml(site: Site): string {
   const colors = (t as any).colors || ({} as any);
   const fonts = (t as any).fonts || { heading: 'Inter', body: 'Inter' };
   const cssVars = `:root{--bg:${esc(colors.background || '#ffffff')};--bg-elev:${esc(colors.surface || '#f8fafc')};--fg:${esc(colors.text || '#0f172a')};--accent:${esc(colors.accent || colors.primary || '#7c5cff')};--accent-glow:${esc(colors.secondary || colors.accent || '#5b8bff')};--text-muted:${esc(colors.textMuted || '#64748b')};--text-dim:${esc(colors.textMuted || '#94a3b8')};--border:${esc(colors.border || '#e5e7eb')};--font-heading:'${esc(fonts.heading || 'Inter')}',sans-serif;--font-body:'${esc(fonts.body || 'Inter')}',sans-serif}`;
+  const isDark = (() => {
+    // detecta pelo theme.style ou luminância do background
+    if ((t as any).style === 'dark-premium') return true;
+    return isColorDark(colors.background || '#ffffff');
+  })();
   const head = `
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -787,7 +792,7 @@ export function siteRendererToHtml(site: Site): string {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>:root{color-scheme:light}html,body{background:var(--bg);color:var(--fg);font-family:var(--font-body)}.text-fg{color:var(--fg)}.text-fg-muted{color:var(--text-muted)}.text-fg-dim{color:var(--text-dim)}.bg-bg{background:var(--bg)}.bg-bg-elev{background:var(--bg-elev)}.bg-accent{background:var(--accent)}.text-accent{color:var(--accent)}.border-accent{border-color:var(--accent)}.border-border{border-color:var(--border)}.card-base{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;transition:border-color .2s}.btn-primary{background:var(--accent);color:white;padding:.5rem 1rem;border-radius:10px;font-weight:500;display:inline-block}img{max-width:100%;height:auto}a{color:inherit;text-decoration:none}${cssVars}}</style>
+    <style>:root{color-scheme:${isDark ? 'dark' : 'light'}}html,body{background:var(--bg);color:var(--fg);font-family:var(--font-body)}.text-fg{color:var(--fg)}.text-fg-muted{color:var(--text-muted)}.text-fg-dim{color:var(--text-dim)}.bg-bg{background:var(--bg)}.bg-bg-elev{background:var(--bg-elev)}.bg-accent{background:var(--accent)}.text-accent{color:var(--accent)}.border-accent{border-color:var(--accent)}.border-border{border-color:var(--border)}.card-base{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;transition:border-color .2s}.btn-primary{background:var(--accent);color:#ffffff;padding:.5rem 1rem;border-radius:10px;font-weight:500;display:inline-block}img{max-width:100%;height:auto}a{color:inherit;text-decoration:none}${cssVars}}</style>
   `;
   // Renderiza apenas a primeira página (home)
   const home = site.pages?.find((p) => p.slug === 'home') || site.pages?.[0];
@@ -801,5 +806,24 @@ export function siteRendererToHtml(site: Site): string {
     </main>
     ${renderFooter(site)}
   `;
-  return `<!doctype html><html lang="pt-BR" class="dark"><head>${head}</head><body>${body}</body></html>`;
+  return `<!doctype html><html lang="pt-BR"${isDark ? ' class="dark"' : ''}><head>${head}</head><body>${body}</body></html>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers de cor
+// ─────────────────────────────────────────────────────────────────
+function hexToRgb(hex: string): [number, number, number] {
+  let h = (hex || '').replace('#', '').trim();
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length !== 6) return [0, 0, 0];
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+function isColorDark(hex: string): boolean {
+  const [r, g, b] = hexToRgb(hex);
+  const srgb = [r, g, b].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  const L = 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+  return L < 0.3;
 }

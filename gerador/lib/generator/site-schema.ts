@@ -173,6 +173,33 @@ export function siteSchemaForTemplate(templateSlug: string, tradeName: string): 
   // etc. Isso evita o problema de todos os 30 sites seguirem a mesma sequência.
   const homeSections: any[] = buildHomeSections(pack);
 
+  // Define se o site é claro ou escuro. Padrão: claro. Pack pode forçar
+  // 'dark' (premium, fotógrafo, escritório boutique) ou 'light'.
+  const isDark = pack.mode === 'dark';
+  const themeColors = isDark
+    ? {
+        // Tema escuro: fundo é surface escuro, texto é claro
+        primary: pack.palette.primary,
+        secondary: pack.palette.secondary,
+        accent: pack.palette.accent,
+        background: pack.palette.primary, // fundo escuro
+        surface: pack.palette.surface || shadeColor(pack.palette.primary, 0.15),
+        text: '#f5fafd',
+        textMuted: 'rgba(245,250,253,0.7)',
+        border: 'rgba(255,255,255,0.12)',
+      }
+    : {
+        // Tema claro: fundo branco, texto escuro
+        primary: pack.palette.primary,
+        secondary: pack.palette.secondary,
+        accent: pack.palette.accent,
+        background: '#ffffff',
+        surface: pack.palette.surface || '#f8fafc',
+        text: '#0f172a',
+        textMuted: '#64748b',
+        border: '#e5e7eb',
+      };
+
   return withDefaults({
     site: {
       name: siteName,
@@ -183,19 +210,10 @@ export function siteSchemaForTemplate(templateSlug: string, tradeName: string): 
       locale: 'pt_BR',
     },
     theme: {
-      colors: {
-        primary: pack.palette.primary,
-        secondary: pack.palette.secondary,
-        accent: pack.palette.accent,
-        background: '#ffffff',
-        surface: pack.palette.surface,
-        text: '#0f172a',
-        textMuted: '#64748b',
-        border: '#e5e7eb',
-      },
+      colors: themeColors,
       typography: { heading: 'Inter, system-ui, sans-serif', body: 'Inter, system-ui, sans-serif' },
       radius: '8px',
-      style: 'moderno',
+      style: isDark ? 'dark-premium' : 'moderno',
     },
     navigation: [
       { label: 'Início', href: '/' },
@@ -272,4 +290,42 @@ export function ensureHomePage(site: Site): Site {
     sections: [],
   };
   return { ...site, pages: [home, ...site.pages] };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers de cor: detectar luminância (dark/light) e clarear/escurecer
+// ─────────────────────────────────────────────────────────────────
+
+/** Converte "#rrggbb" em [r, g, b] (0–255). Aceita hex de 3 ou 6 dígitos. */
+function hexToRgb(hex: string): [number, number, number] {
+  let h = (hex || '').replace('#', '').trim();
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length !== 6) return [0, 0, 0];
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+/** Luminância relativa (WCAG). Retorna 0 (preto) a 1 (branco). */
+function luminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex);
+  const srgb = [r, g, b].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+}
+
+/** Devolve true se a cor for escura o suficiente pra virar tema dark. */
+function isColorDark(hex: string): boolean {
+  return luminance(hex) < 0.25;
+}
+
+/** Clareia ou escurece uma cor base por um fator (-1 = preto, 1 = branco). */
+function shadeColor(hex: string, factor: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  const target = factor < 0 ? 0 : 255;
+  const f = Math.abs(factor);
+  const nr = Math.round(r + (target - r) * f);
+  const ng = Math.round(g + (target - g) * f);
+  const nb = Math.round(b + (target - b) * f);
+  return '#' + [nr, ng, nb].map((v) => v.toString(16).padStart(2, '0')).join('');
 }

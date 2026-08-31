@@ -38,10 +38,15 @@ export interface PaletteConfig {
   surface: string;
 }
 
+/** Define se o site renderiza com fundo escuro (true) ou claro (false). */
+export type Mode = 'light' | 'dark';
+
 export interface ContentPack {
   slug: string;
   tagline: string;
   palette: PaletteConfig;
+  /** 'light' (claro) ou 'dark' (escuro). Default: detectado pela luminância de palette.primary. */
+  mode?: Mode;
   aboutText: string;
   hero: HeroConfig;
   services: ServiceItem[];
