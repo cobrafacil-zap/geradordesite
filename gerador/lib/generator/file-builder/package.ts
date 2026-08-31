@@ -100,8 +100,8 @@ const config: Config = {
       },
     },
     fontFamily: {
-      sans: ['${theme.typography.body.split(',')[0].trim()}', 'system-ui', 'sans-serif'],
-      heading: ['${theme.typography.heading.split(',')[0].trim()}', 'system-ui', 'sans-serif'],
+      sans: ['${(theme.fonts?.body || (theme as any).typography?.body || 'Inter').split(',')[0].trim()}', 'system-ui', 'sans-serif'],
+      heading: ['${(theme.fonts?.heading || (theme as any).typography?.heading || 'Inter').split(',')[0].trim()}', 'system-ui', 'sans-serif'],
     },
     borderRadius: { xl: '0.875rem', '2xl': '1.125rem' },
   } },

@@ -49,8 +49,28 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .single();
   if (!project) return NextResponse.json({ error: 'projeto não encontrado' }, { status: 404 });
 
-  // Atualiza versão atual (autosave)
-  if (project.current_version_id) {
+  // Atualiza versão atual (autosave). Se ainda não tem current_version_id,
+  // cria uma nova project_versions com o schema e vincula — antes era um
+  // no-op silencioso que retornava { ok: true } sem persistir nada.
+  let versionId = project.current_version_id;
+  if (!versionId) {
+    const { data: created, error: createErr } = await supabase
+      .from('project_versions')
+      .insert({
+        project_id: project.id,
+        schema_json: schema || {},
+        theme_json: theme || null,
+        assets_json: assets ?? [],
+        label: label || 'v1',
+      })
+      .select('id')
+      .single();
+    if (createErr) {
+      return NextResponse.json({ error: 'falha ao criar versão inicial', detail: createErr.message }, { status: 500 });
+    }
+    versionId = created.id;
+    await supabase.from('projects').update({ current_version_id: versionId }).eq('id', project.id);
+  } else {
     const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
     if (schema) updatePayload.schema_json = schema;
     if (theme) updatePayload.theme_json = theme;
@@ -59,7 +79,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await supabase
       .from('project_versions')
       .update(updatePayload)
-      .eq('id', project.current_version_id);
+      .eq('id', versionId);
   }
   // Atualiza updated_at do projeto
   await supabase

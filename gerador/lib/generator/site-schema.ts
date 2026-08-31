@@ -52,10 +52,12 @@ export const ThemeSchema = z.object({
     textMuted: z.string().default('#64748b'),
     border: z.string().default('#e5e7eb'),
   }),
-  typography: z.object({
+  // Aceita 'fonts' (preferido pelo editor/renderer) OU 'typography' (legado do file-builder).
+  // Sempre materializa como 'fonts' no schema normalizado.
+  fonts: z.object({
     heading: z.string().default('Inter, system-ui, sans-serif'),
     body: z.string().default('Inter, system-ui, sans-serif'),
-  }),
+  }).default({ heading: 'Inter, system-ui, sans-serif', body: 'Inter, system-ui, sans-serif' }),
   radius: z.string().default('8px'),
   style: z.string().default('moderno'),
 });
@@ -139,6 +141,13 @@ export function safeParseSite(input: unknown): ParseResult<Site> {
 
 /** Aplica defaults progressivos a um schema parcial. */
 export function withDefaults(input: Partial<Site> & { site: { name: string } }): Site {
+  // Shim de compatibilidade: se o input vier com o nome legado `theme.typography`,
+  // migra pra `theme.fonts` (que é o que renderer/editor esperam).
+  const themeInput: any = input.theme || {};
+  if (themeInput.typography && !themeInput.fonts) {
+    themeInput.fonts = themeInput.typography;
+  }
+  if (themeInput.typography) delete themeInput.typography;
   const minimal: Site = {
     site: {
       name: input.site.name,
@@ -211,7 +220,7 @@ export function siteSchemaForTemplate(templateSlug: string, tradeName: string): 
     },
     theme: {
       colors: themeColors,
-      typography: { heading: 'Inter, system-ui, sans-serif', body: 'Inter, system-ui, sans-serif' },
+      fonts: { heading: 'Inter, system-ui, sans-serif', body: 'Inter, system-ui, sans-serif' },
       radius: '8px',
       style: isDark ? 'dark-premium' : 'moderno',
     },

@@ -57,9 +57,10 @@ export function extractJson<T>(raw: string, schema: z.ZodType<T>): T {
   try {
     return schema.parse(JSON.parse(raw));
   } catch (e: any) { lastErr = `parse: ${e?.message?.slice(0, 200)}`; }
-  // Tenta extrair bloco ```json ... ```
-  const m = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (m) {
+  // Tenta extrair bloco ```json ... ``` (case-insensitive: ```JSON ou ```Json)
+  const blockRe = /```(?:json|Json|JSON)?\s*([\s\S]*?)```/gi;
+  let m: RegExpExecArray | null;
+  while ((m = blockRe.exec(raw)) !== null) {
     try { return schema.parse(JSON.parse(m[1])); } catch (e: any) { lastErr = `block: ${e?.message?.slice(0, 200)}`; }
   }
   // Tenta primeiro { ... } balanceado

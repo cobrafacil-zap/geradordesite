@@ -19,7 +19,9 @@ export function buildSiteFiles(opts: BuildOptions): FileMap {
   const name = (site.site.trade || site.site.name).replace(/'/g, "\\'");
   const slogan = (site.seo.defaultDescription || site.site.slogan || '').replace(/'/g, "\\'").slice(0, 200);
   const lang = site.site.language || 'pt-BR';
-  const font = (site.theme.typography.body || 'Inter').split(',')[0].trim().replace(/\s+/g, '+');
+  const fontBody = (site.theme as any).fonts?.body || (site.theme as any).typography?.body || 'Inter';
+  const fontHeading = (site.theme as any).fonts?.heading || (site.theme as any).typography?.heading || 'Inter';
+  const font = fontBody.split(',')[0].trim().replace(/\s+/g, '+');
   const c = site.theme.colors;
 
   // ── layout.tsx ───────────────────────────────────────────────
@@ -69,7 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; background: var(--c-bg); color: var(--c-text); font-family: ${site.theme.typography.body}; }
+html, body { margin: 0; padding: 0; background: var(--c-bg); color: var(--c-text); font-family: ${fontBody}; }
 img { max-width: 100%; height: auto; display: block; }
 a { color: inherit; }
 `;

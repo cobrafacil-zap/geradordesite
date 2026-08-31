@@ -50,7 +50,10 @@ export default function EditorPage() {
   // srcDoc do iframe — recalculado localmente a cada edição. Vantagem:
   // atualização IMEDIATA do preview sem depender do PATCH/Supabase/cache.
   // O PATCH continua salvando no banco; o iframe só usa o que o client tem.
-  const [previewSrcDoc, setPreviewSrcDoc] = useState<string>('');
+  // Começa com placeholder (string não-vazia) pra evitar race entre src/srcDoc.
+  const [previewSrcDoc, setPreviewSrcDoc] = useState<string>(
+    '<!doctype html><html><body style="margin:0;background:#0f172a;color:#fff;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh">Carregando preview…</body></html>'
+  );
 
   // Carrega projeto + schema
   useEffect(() => {
@@ -171,14 +174,18 @@ export default function EditorPage() {
   async function doSave(s: any) {
     setSaving(true);
     try {
-      // 1) Sempre salva em localStorage como fallback (funciona mesmo sem Supabase)
+      // Snapshot do que estava antes pra rollback localStorage em caso de falha
+      let prevCached: string | null = null;
+      if (typeof window !== 'undefined') {
+        try { prevCached = localStorage.getItem(`gerador:project:${projectId}`); } catch {}
+      }
+      // 1) Salva em localStorage (escrita otimista)
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(`gerador:project:${projectId}`, JSON.stringify(s));
         } catch {}
       }
-      // 2) Tenta persistir no Supabase. Só recarrega o iframe APÓS o 200 OK
-      //    para garantir que o DB tem o schema novo antes do preview buscar.
+      // 2) Tenta persistir no Supabase
       try {
         const res = await fetch(`/api/projects/${projectId}`, {
           method: 'PATCH',
@@ -187,19 +194,27 @@ export default function EditorPage() {
         });
         if (res.ok) {
           setSavedAt(new Date());
-          // Incrementa previewKey DEPOIS do save — assim o iframe só
-          // recarrega com a nova URL quando o DB já tem o schema novo.
           setPreviewKey((k) => k + 1);
-          // Força reload duro do iframe também — backup caso o cache do
-          // navegador segure o iframe apesar do key ter mudado.
           try {
             const ifr = iframeRef.current;
             if (ifr && ifr.contentWindow) {
               ifr.contentWindow.location.reload();
             }
           } catch {}
+        } else {
+          // PATCH falhou (4xx/5xx) — reverte localStorage pra não divergir do servidor
+          if (typeof window !== 'undefined' && prevCached !== null) {
+            try { localStorage.setItem(`gerador:project:${projectId}`, prevCached); } catch {}
+          }
+          console.error('PATCH falhou', res.status, await res.text().catch(() => ''));
         }
-      } catch {}
+      } catch (e) {
+        // Network error — também reverte localStorage
+        if (typeof window !== 'undefined' && prevCached !== null) {
+          try { localStorage.setItem(`gerador:project:${projectId}`, prevCached); } catch {}
+        }
+        console.error('PATCH erro de rede', e);
+      }
     } finally {
       setSaving(false);
     }
@@ -443,8 +458,7 @@ export default function EditorPage() {
               <iframe
                 key={`${previewKey}-${selectedPageIdx}`}
                 ref={iframeRef}
-                srcDoc={previewSrcDoc || undefined}
-                src={previewSrcDoc ? undefined : `/api/preview/${projectId}?v=${previewKey}&pageIdx=${selectedPageIdx}&ts=${previewKey}`}
+                srcDoc={previewSrcDoc}
                 className="w-full h-full bg-white"
                 title="Preview do site"
                 sandbox="allow-same-origin allow-scripts"
