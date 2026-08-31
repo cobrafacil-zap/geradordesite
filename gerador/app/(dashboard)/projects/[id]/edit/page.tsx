@@ -399,7 +399,7 @@ export default function EditorPage() {
               <iframe
                 key={previewKey}
                 ref={iframeRef}
-                src={`/api/preview/${projectId}`}
+                src={`/api/preview/${projectId}?v=${previewKey}&t=${Date.now()}`}
                 className="w-full h-full bg-white"
                 title="Preview do site"
                 sandbox="allow-same-origin allow-scripts"
