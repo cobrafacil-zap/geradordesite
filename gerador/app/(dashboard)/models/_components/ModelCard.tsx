@@ -14,9 +14,6 @@ type Template = {
   color: string;
 };
 
-const FALLBACK_GRADIENT = (color: string) =>
-  `linear-gradient(135deg, ${color}22 0%, ${color}66 100%)`;
-
 export function ModelCard({ template }: { template: Template }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
@@ -45,12 +42,17 @@ export function ModelCard({ template }: { template: Template }) {
 
   return (
     <Card hover={false} className="!p-0 overflow-hidden group flex flex-col">
+      {/*
+        Container com altura fixa. Iframe com width 100% e height ~1500px
+        (altura típica de um site). O container tem overflow-auto, então o
+        usuário pode rolar pra ver o site inteiro, com toda a estrutura
+        diferenciada por segmento (Properties, MenuFull, Gallery, etc.).
+      */}
       <div
         ref={wrapRef}
-        className="aspect-[4/3] relative overflow-hidden bg-bg-elev2"
-        style={{ background: FALLBACK_GRADIENT(template.color) }}
+        className="relative overflow-auto bg-white border-b border-border"
+        style={{ height: 320 }}
       >
-        {/* Preview iframe — lazy */}
         {shouldLoad && (
           <iframe
             key={template.slug}
@@ -60,28 +62,26 @@ export function ModelCard({ template }: { template: Template }) {
             referrerPolicy="no-referrer"
             sandbox="allow-same-origin allow-scripts"
             onLoad={() => setLoaded(true)}
-            className={`absolute inset-0 w-full h-full border-0 transition-opacity duration-300 ${
+            className={`block border-0 transition-opacity duration-300 ${
               loaded ? 'opacity-100' : 'opacity-0'
             }`}
             style={{
-              // Escala visual para preencher melhor o card
-              transform: 'scale(0.32)',
-              transformOrigin: 'top left',
-              width: '312%',
-              height: '312%',
-              pointerEvents: 'none',
+              width: '100%',
+              height: 1500,
+              pointerEvents: 'auto',
             }}
           />
         )}
-        {/* Skeleton enquanto iframe não terminou de carregar */}
+        {/* Skeleton enquanto iframe carrega */}
         {shouldLoad && !loaded && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-bg-elev2">
             <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-2xl border border-white/20 animate-pulse">
               {template.emoji}
             </div>
           </div>
         )}
-        <Badge variant="default" className="absolute top-2 left-2 z-10">{template.tag}</Badge>
+        {/* Tag do template no canto */}
+        <Badge variant="default" className="absolute top-2 left-2 z-20">{template.tag}</Badge>
       </div>
       <div className="p-4 flex flex-col gap-2 flex-1">
         <div>
