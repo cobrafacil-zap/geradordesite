@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:renderer": "npx tsx scripts/test-setmode.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
