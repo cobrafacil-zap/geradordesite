@@ -5,7 +5,10 @@ import { NextResponse, type NextRequest } from 'next/server';
  * Middleware principal — NUNCA quebra, sempre retorna NextResponse.
  *
  * Em dev (sem Supabase) → deixa passar tudo.
- * Em produção → verifica sessão Supabase e redireciona para /login se preciso.
+ * Em produção → verifica sessão Supabase. Rotas não-públicas (incluindo /admin)
+ * são PROTEGIDAS, mas **sem redirecionar pra /login** — isso evitaria
+ * "denunciar" que existe um painel. Em vez disso, o middleware deixa passar
+ * e o layout (admin) chama `notFound()` quando a sessão é inválida.
  *
  * Public paths são acessíveis sem login.
  * Em caso de QUALQUER erro (Supabase offline, key inválida, etc) → deixa passar
@@ -55,12 +58,9 @@ export async function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
     const publicPath = isPublic(pathname);
 
-    if (!session && !publicPath) {
-      const redirectUrl = new URL('/login', request.url);
-      redirectUrl.searchParams.set('next', pathname);
-      return NextResponse.redirect(redirectUrl);
-    }
-
+    // Comportamento de redirect foi removido: rotas protegidas (incluindo
+    // /admin/*) são renderizadas e o layout Server decide o que fazer.
+    // Se a sessão existir e o usuário está em /login ou /, manda pro admin.
     if (session && (pathname === '/login' || pathname === '/')) {
       return NextResponse.redirect(new URL('/admin/dashboard', request.url));
     }
