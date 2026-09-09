@@ -50,7 +50,7 @@ export function DashboardContent() {
             <p className="text-xs uppercase tracking-wider text-fg-dim mb-1">{now}</p>
             <h1 className="text-3xl font-bold text-fg">{greeting}, Nicolas.</h1>
           </div>
-          <Link href="/projects/new" className="btn-primary flex items-center gap-2">
+          <Link href="/admin/projects/new" className="btn-primary flex items-center gap-2">
             <Icon name="plus" size={16} /> Novo Projeto
           </Link>
         </div>

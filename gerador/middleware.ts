@@ -15,6 +15,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PUBLIC_PATHS = [
   '/login',
   '/setup',
+  '/lp', // landing page pública de pré-qualificação (Social Marketing BR)
   '/auth/callback',
   '/auth/confirm',
   '/api/auth', // login/signup/logout/callback — nunca redirecionar (são endpoints que o cliente chama)
@@ -61,7 +62,7 @@ export async function middleware(request: NextRequest) {
     }
 
     if (session && (pathname === '/login' || pathname === '/')) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
     }
   } catch (err) {
     // NUNCA deixar o middleware quebrar — apenas log e segue

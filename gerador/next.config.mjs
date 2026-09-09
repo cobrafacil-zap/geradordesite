@@ -10,6 +10,19 @@ const nextConfig = {
   experimental: {
     serverActions: { bodySizeLimit: '10mb' },
   },
+  // Renomeação do painel para /admin (antigo /(dashboard)).
+  // URLs antigas redirecionam 308 (permanente) para /admin/...
+  async redirects() {
+    return [
+      { source: '/projects', destination: '/admin/projects', permanent: true },
+      { source: '/projects/:path*', destination: '/admin/projects/:path*', permanent: true },
+      { source: '/models', destination: '/admin/models', permanent: true },
+      { source: '/clients', destination: '/admin/clients', permanent: true },
+      { source: '/settings', destination: '/admin/settings', permanent: true },
+      { source: '/media', destination: '/admin/media', permanent: true },
+      { source: '/dashboard', destination: '/admin/dashboard', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

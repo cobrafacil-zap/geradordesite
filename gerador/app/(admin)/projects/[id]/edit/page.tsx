@@ -345,7 +345,7 @@ export default function EditorPage() {
             >
               Recarregar
             </button>
-            <Link href="/projects" className="btn-secondary text-sm">Voltar ao dashboard</Link>
+            <Link href="/admin/projects" className="btn-secondary text-sm">Voltar ao dashboard</Link>
           </div>
         </Card>
       </div>
@@ -359,7 +359,7 @@ export default function EditorPage() {
       {/* Topbar */}
       <header className="border-b border-border bg-bg-elev/60 backdrop-blur px-4 py-2.5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <Link href="/projects" className="text-fg-muted hover:text-fg">
+          <Link href="/admin/projects" className="text-fg-muted hover:text-fg">
             <Icon name="arrow-left" size={16} />
           </Link>
           <div className="min-w-0">
@@ -898,7 +898,7 @@ function GenerationPanel({ steps, onClose }: { steps: any[]; onClose: () => void
         {allDone && (
           <div className="mt-5 flex gap-2">
             <Button onClick={onClose} className="flex-1">Ver preview</Button>
-            <Link href="/projects" className="btn-secondary">Voltar ao dashboard</Link>
+            <Link href="/admin/projects" className="btn-secondary">Voltar ao dashboard</Link>
           </div>
         )}
       </Card>

@@ -73,7 +73,7 @@ export default function ProjectsPage() {
           <h1 className="text-3xl font-bold text-fg mb-1">Projetos</h1>
           <p className="text-fg-muted">Crie, edite e exporte sites profissionais.</p>
         </div>
-        <Link href="/projects/new" className="btn-primary flex items-center gap-2">
+        <Link href="/admin/projects/new" className="btn-primary flex items-center gap-2">
           <Icon name="plus" size={16} /> Novo Projeto
         </Link>
       </header>
@@ -104,7 +104,7 @@ export default function ProjectsPage() {
               title="Nenhum projeto ainda"
               description="Crie seu primeiro site profissional em minutos usando nossos 30 templates."
               action={
-                <Link href="/projects/new" className="btn-primary inline-flex items-center gap-2">
+                <Link href="/admin/projects/new" className="btn-primary inline-flex items-center gap-2">
                   <Icon name="plus" size={16} /> Criar primeiro projeto
                 </Link>
               }

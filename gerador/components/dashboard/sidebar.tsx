@@ -40,7 +40,7 @@ export function Sidebar({ userName, userEmail }: { userName?: string; userEmail?
       {/* New project CTA */}
       <div className="px-3 pt-4">
         <Link
-          href="/projects/new"
+          href="/admin/projects/new"
           className="flex items-center justify-center gap-2 btn-primary w-full"
         >
           <span className="text-lg leading-none">+</span> Novo Projeto

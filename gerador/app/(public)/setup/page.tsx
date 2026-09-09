@@ -93,7 +93,7 @@ export default function SetupPage() {
           </ol>
           <div className="mt-4 flex gap-2">
             <Link
-              href="/projects"
+              href="/admin/projects"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
             >
               Tentar dashboard →

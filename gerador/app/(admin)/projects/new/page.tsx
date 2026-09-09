@@ -122,7 +122,7 @@ export default function NewProjectPage() {
       {/* Topbar */}
       <div className="border-b border-border px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/projects" className="btn-ghost p-2">
+          <Link href="/admin/projects" className="btn-ghost p-2">
             <Icon name="arrow-left" size={16} />
           </Link>
           <div>
@@ -130,7 +130,7 @@ export default function NewProjectPage() {
             <div className="text-xs text-fg-muted">Passo {step} de {STEPS.length}</div>
           </div>
         </div>
-        <Link href="/projects" className="text-xs text-fg-muted hover:text-fg">
+        <Link href="/admin/projects" className="text-xs text-fg-muted hover:text-fg">
           Cancelar
         </Link>
       </div>

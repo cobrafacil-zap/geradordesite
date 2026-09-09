@@ -17,7 +17,7 @@ export default function ClientsPage() {
           title="Em breve"
           description="A gestão de clientes será integrada ao criar projetos. Por enquanto, o nome do cliente é capturado no wizard."
           action={
-            <Link href="/projects/new" className="btn-primary inline-flex items-center gap-2">
+            <Link href="/admin/projects/new" className="btn-primary inline-flex items-center gap-2">
               <Icon name="plus" size={16} /> Novo Projeto
             </Link>
           }
