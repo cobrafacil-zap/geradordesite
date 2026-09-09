@@ -3,7 +3,7 @@
 import { RendererProps, waLink, Check } from './registry';
 
 /**
- * Hero — 15+ variantes
+ * Hero — variantes:
  * A: split (img dir + copy esq)
  * B: centrado com imagem de fundo
  * C: magazine (3 colunas com cards)
@@ -11,6 +11,9 @@ import { RendererProps, waLink, Check } from './registry';
  * E: service grid compacto
  * F: vitrine 3 cards (imobiliária/restaurante)
  * G: gallery polaroids
+ * H: badge gigante + imagem em moldura circular (copy à esquerda)
+ * I: split assimétrico 60/40 com imagem colada na borda direita
+ * J: sticky-form CTA (copy à esquerda + formulário de captura à direita) — conversão
  */
 export function Hero({ content, theme, siteName }: RendererProps) {
   const variant = (content?.variant as string) || 'A';
@@ -24,6 +27,10 @@ export function Hero({ content, theme, siteName }: RendererProps) {
     badge: content?.badge || '',
     stats: content?.stats || [],
     cards: content?.cards || [],
+    formTitle: (content?.formTitle as string) || 'Garanta sua vaga',
+    formPlaceholder: (content?.formPlaceholder as string) || 'seu@email.com',
+    formButton: (content?.formButton as string) || 'Quero participar',
+    privacyNote: (content?.privacyNote as string) || 'Sem spam. Cancele quando quiser.',
   };
 
   return (
@@ -35,7 +42,10 @@ export function Hero({ content, theme, siteName }: RendererProps) {
       {variant === 'E' && <HeroE data={data} theme={theme} />}
       {variant === 'F' && <HeroF data={data} theme={theme} />}
       {variant === 'G' && <HeroG data={data} theme={theme} />}
-      {!['A','B','C','D','E','F','G'].includes(variant) && <HeroA data={data} theme={theme} />}
+      {variant === 'H' && <HeroH data={data} theme={theme} />}
+      {variant === 'I' && <HeroI data={data} theme={theme} />}
+      {variant === 'J' && <HeroJ data={data} theme={theme} />}
+      {!['A','B','C','D','E','F','G','H','I','J'].includes(variant) && <HeroA data={data} theme={theme} />}
       <style>{heroStyles}</style>
     </section>
   );
@@ -45,6 +55,8 @@ type HeroData = {
   title: string; subtitle: string; cta: string; ctaSecondary: string;
   image: string; whatsapp: string; badge: string;
   stats: any[]; cards: any[];
+  // Hero J (sticky-form)
+  formTitle?: string; formPlaceholder?: string; formButton?: string; privacyNote?: string;
 };
 type Th = RendererProps['theme'];
 
@@ -224,6 +236,87 @@ function HeroG({ data, theme }: { data: HeroData; theme: Th }) {
   );
 }
 
+// Hero H — badge gigante + imagem em moldura circular, copy à esquerda
+function HeroH({ data, theme }: { data: HeroData; theme: Th }) {
+  return (
+    <div className="wrap hero-h-grid">
+      <div className="hero-h-copy">
+        {data.badge && <div className="hero-h-badge">{data.badge}</div>}
+        <h1>{data.title}</h1>
+        {data.subtitle && <p>{data.subtitle}</p>}
+        <div className="hero-actions">
+          {data.whatsapp && <a href={waLink(data.whatsapp)} target="_blank" rel="noopener" className="btn-primary">{data.cta}</a>}
+        </div>
+      </div>
+      <div className="hero-h-img-wrap">
+        <div className="hero-h-circle">
+          {data.image ? <img src={data.image} alt="" /> : <div className="hero-h-img-placeholder">★</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Hero I — split assimétrico 60/40 com imagem colada na borda direita
+function HeroI({ data, theme }: { data: HeroData; theme: Th }) {
+  return (
+    <div className="wrap hero-i-grid">
+      <div className="hero-i-copy">
+        {data.badge && <span className="hero-badge">{data.badge}</span>}
+        <h1>{data.title}</h1>
+        {data.subtitle && <p>{data.subtitle}</p>}
+        <div className="hero-actions">
+          {data.whatsapp && <a href={waLink(data.whatsapp)} target="_blank" rel="noopener" className="btn-primary">{data.cta}</a>}
+        </div>
+        {data.stats.length > 0 && (
+          <div className="hero-stats">
+            {data.stats.map((s: any, i: number) => (
+              <div key={i} className="hero-stat">
+                <div className="hero-stat-num">{s.value}</div>
+                <div className="hero-stat-label">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="hero-i-img">
+        {data.image ? <img src={data.image} alt="" /> : <div className="hero-img-placeholder" />}
+      </div>
+    </div>
+  );
+}
+
+// Hero J — copy à esquerda + formulário de captura à direita. Ideal pra landing pages de conversão.
+function HeroJ({ data, theme }: { data: HeroData; theme: Th }) {
+  return (
+    <div className="wrap hero-j-grid">
+      <div className="hero-j-copy">
+        {data.badge && <span className="hero-badge">{data.badge}</span>}
+        <h1>{data.title}</h1>
+        {data.subtitle && <p>{data.subtitle}</p>}
+        {data.stats.length > 0 && (
+          <div className="hero-stats hero-stats-vertical">
+            {data.stats.map((s: any, i: number) => (
+              <div key={i} className="hero-stat">
+                <div className="hero-stat-num">{s.value}</div>
+                <div className="hero-stat-label">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="hero-j-form-card">
+        <div className="hero-j-form-title">{data.formTitle}</div>
+        <form className="hero-j-form" onSubmit={(e) => e.preventDefault()}>
+          <input type="email" placeholder={data.formPlaceholder} className="hero-j-input" required />
+          <button type="submit" className="hero-j-submit">{data.formButton}</button>
+        </form>
+        {data.privacyNote && <div className="hero-j-privacy">{data.privacyNote}</div>}
+      </div>
+    </div>
+  );
+}
+
 const heroStyles = `
 .hero { padding: 80px 0; position: relative; overflow: hidden; }
 .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
@@ -321,10 +414,93 @@ const heroStyles = `
 .g-photo { background: linear-gradient(135deg, var(--c-primary), var(--c-secondary)); border-radius: 8px; }
 .g-1 { grid-row: span 2; }
 
+/* Hero H — badge gigante + moldura circular */
+.hero-h-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 80px; align-items: center; }
+.hero-h-copy h1 { color: var(--c-text); }
+.hero-h-copy p { color: var(--c-text-muted); max-width: 520px; }
+.hero-h-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 22px;
+  margin-bottom: 28px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: var(--c-accent);
+  color: #fff;
+  text-transform: uppercase;
+  box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--c-accent) 50%, transparent);
+}
+.hero-h-img-wrap { display: flex; align-items: center; justify-content: center; position: relative; }
+.hero-h-circle {
+  width: 420px; height: 420px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--c-primary), var(--c-accent));
+  box-shadow: 0 32px 80px -24px color-mix(in srgb, var(--c-primary) 50%, transparent);
+  border: 8px solid var(--c-surface);
+}
+.hero-h-circle img { width: 100%; height: 100%; object-fit: cover; }
+.hero-h-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 140px; color: rgba(255,255,255,0.4); }
+
+/* Hero I — split assimétrico 60/40, imagem colada na borda direita */
+.hero-i-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 32px; align-items: stretch; }
+.hero-i-copy { padding: 24px 24px 24px 0; }
+.hero-i-copy h1 { color: var(--c-text); font-size: clamp(40px, 6vw, 76px); }
+.hero-i-copy p { color: var(--c-text-muted); }
+.hero-i-img { position: relative; border-radius: 24px 0 0 24px; overflow: hidden; min-height: 520px; }
+.hero-i-img img { width: 100%; height: 100%; object-fit: cover; }
+.hero-i-img .hero-img-placeholder { width: 100%; height: 100%; border-radius: 0; aspect-ratio: auto; }
+
+/* Hero J — sticky-form CTA (copy + form de captura) */
+.hero-j-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 64px; align-items: center; }
+.hero-j-copy h1 { color: var(--c-text); }
+.hero-j-copy p { color: var(--c-text-muted); }
+.hero-stats-vertical { flex-direction: column; align-items: flex-start; gap: 18px; margin-top: 40px; }
+.hero-j-form-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 24px 64px -24px color-mix(in srgb, var(--c-primary) 30%, transparent);
+}
+.hero-j-form-title { font-size: 20px; font-weight: 700; color: var(--c-text); margin-bottom: 18px; }
+.hero-j-form { display: flex; flex-direction: column; gap: 12px; }
+.hero-j-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--c-border);
+  background: var(--c-background, #fff);
+  color: var(--c-text);
+  font-size: 15px;
+  outline: none;
+  transition: border-color .15s;
+}
+.hero-j-input:focus { border-color: var(--c-accent); }
+.hero-j-submit {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--c-accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: filter .15s, transform .1s;
+}
+.hero-j-submit:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.hero-j-privacy { font-size: 12px; color: var(--c-text-muted); margin-top: 12px; text-align: center; }
+
 @media (max-width: 768px) {
-  .hero-a-grid, .hero-c-grid, .hero-d-grid, .hero-f-inner, .hero-g-inner { grid-template-columns: 1fr; gap: 40px; }
+  .hero-a-grid, .hero-c-grid, .hero-d-grid, .hero-f-inner, .hero-g-inner, .hero-h-grid, .hero-i-grid, .hero-j-grid { grid-template-columns: 1fr; gap: 40px; }
   .hero-e-grid, .hero-f-cards { grid-template-columns: 1fr; }
   .hero-stats { flex-direction: column; gap: 16px; }
+  .hero-stats-vertical { flex-direction: row; gap: 24px; flex-wrap: wrap; }
   .hero-gallery-grid { height: 320px; }
+  .hero-h-circle { width: 280px; height: 280px; border-width: 4px; }
+  .hero-i-img { border-radius: 16px; min-height: 320px; }
 }
 `;

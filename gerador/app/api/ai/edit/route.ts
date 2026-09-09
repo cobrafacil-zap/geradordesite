@@ -18,7 +18,12 @@ Regras:
 2. Preserve toda a estrutura existente.
 3. Aplique APENAS as alterações pedidas no comando.
 4. Não invente dados reais — use placeholders.
-5. Se o comando for ambíguo, faça a interpretação mais conservadora.`;
+5. Se o comando for ambíguo, faça a interpretação mais conservadora.
+6. IMAGENS: não atribua URLs a campos de imagem (ex: hero.image, gallery[].src,
+   team[].photo, products[].image, menuCategories[].items[].image). Mantenha os
+   valores atuais ou devolva string vazia para indicar que o usuário deve
+   fazer upload via a aba Imagens. Nunca invente URLs de Unsplash, placeholders
+   genéricos ou imagens de banco de dados. O usuário troca imagens na UI dedicada.`;
 
 export async function POST(req: NextRequest) {
   try {

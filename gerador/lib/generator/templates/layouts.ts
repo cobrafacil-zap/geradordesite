@@ -32,33 +32,102 @@ const footer = (): AnySection => ({
 });
 
 const heroSplit = (pack: ContentPack): AnySection => ({
-  component: 'Hero', variant: 'split',
+  component: 'Hero', variant: 'A',
   content: { eyebrow: pack.hero.eyebrow, title: pack.hero.title, subtitle: pack.hero.subtitle, ctaLabel: pack.hero.ctaLabel, ctaHref: pack.hero.ctaHref, image: pack.hero.image, imageAlt: pack.hero.imageAlt },
 });
 
 const heroFullbleed = (pack: ContentPack): AnySection => ({
-  component: 'Hero', variant: 'fullbleed',
+  component: 'Hero', variant: 'B',
   content: { eyebrow: pack.hero.eyebrow, title: pack.hero.title, subtitle: pack.hero.subtitle, ctaLabel: pack.hero.ctaLabel, ctaHref: pack.hero.ctaHref, image: pack.hero.image, imageAlt: pack.hero.imageAlt },
 });
 
 const heroCentered = (pack: ContentPack): AnySection => ({
-  component: 'Hero', variant: 'centered-bold',
+  component: 'Hero', variant: 'C',
   content: { eyebrow: pack.hero.eyebrow, title: pack.hero.title, subtitle: pack.hero.subtitle, ctaLabel: pack.hero.ctaLabel, ctaHref: pack.hero.ctaHref, image: pack.hero.image },
 });
 
 const heroDarkPremium = (pack: ContentPack): AnySection => ({
-  component: 'Hero', variant: 'dark-premium',
+  component: 'Hero', variant: 'D',
   content: { eyebrow: pack.hero.eyebrow, title: pack.hero.title, subtitle: pack.hero.subtitle, ctaLabel: pack.hero.ctaLabel, ctaHref: pack.hero.ctaHref, image: pack.hero.image },
 });
 
 const heroMagazine = (pack: ContentPack): AnySection => ({
-  component: 'Hero', variant: 'magazine',
+  component: 'Hero', variant: 'C',
   content: { eyebrow: pack.hero.eyebrow, title: pack.hero.title, subtitle: pack.hero.subtitle, ctaLabel: pack.hero.ctaLabel, ctaHref: pack.hero.ctaHref, image: pack.hero.image },
 });
 
 const heroAlert = (pack: ContentPack): AnySection => ({
-  component: 'Hero', variant: 'card-informativo',
+  component: 'Hero', variant: 'G',
   content: { eyebrow: pack.hero.eyebrow, title: pack.hero.title, subtitle: pack.hero.subtitle, ctaLabel: pack.hero.ctaLabel, ctaHref: pack.hero.ctaHref, image: pack.hero.image },
+});
+
+// Hero H — badge gigante + imagem em moldura circular (uso amplo).
+const heroBadge = (pack: ContentPack): AnySection => ({
+  component: 'Hero', variant: 'H',
+  content: {
+    badge: pack.hero.eyebrow,
+    title: pack.hero.title,
+    subtitle: pack.hero.subtitle,
+    cta: pack.hero.ctaLabel,
+    ctaSecondary: '',
+    image: pack.hero.image,
+  },
+});
+
+// Hero I — split assimétrico 60/40, imagem colada na borda direita.
+const heroAsymmetric = (pack: ContentPack): AnySection => ({
+  component: 'Hero', variant: 'I',
+  content: {
+    eyebrow: pack.hero.eyebrow,
+    title: pack.hero.title,
+    subtitle: pack.hero.subtitle,
+    ctaLabel: pack.hero.ctaLabel,
+    ctaHref: pack.hero.ctaHref,
+    image: pack.hero.image,
+  },
+});
+
+// Hero E — service grid (ícones + texto sem imagem).
+const heroServiceGrid = (pack: ContentPack): AnySection => ({
+  component: 'Hero', variant: 'E',
+  content: {
+    eyebrow: pack.hero.eyebrow,
+    title: pack.hero.title,
+    subtitle: pack.hero.subtitle,
+    ctaLabel: pack.hero.ctaLabel,
+    ctaHref: pack.hero.ctaHref,
+  },
+});
+
+// Hero F — vitrine de cards.
+const heroVitrine = (pack: ContentPack): AnySection => ({
+  component: 'Hero', variant: 'F',
+  content: {
+    eyebrow: pack.hero.eyebrow,
+    title: pack.hero.title,
+    subtitle: pack.hero.subtitle,
+    ctaLabel: pack.hero.ctaLabel,
+    ctaHref: pack.hero.ctaHref,
+    cards: (pack.services || []).slice(0, 3).map((s) => ({ title: s.name, desc: s.desc })),
+  },
+});
+
+// Hero J — sticky-form: copy à esquerda + formulário de captura à direita.
+// Usado pelas landing pages de conversão (lp-*).
+const heroStickyForm = (pack: ContentPack): AnySection => ({
+  component: 'Hero', variant: 'J',
+  content: {
+    eyebrow: pack.hero.eyebrow,
+    title: pack.hero.title,
+    subtitle: pack.hero.subtitle,
+    ctaLabel: pack.hero.ctaLabel,
+    ctaHref: pack.hero.ctaHref,
+    formTitle: 'Garanta sua vaga',
+    formPlaceholder: 'seu@email.com',
+    formButton: pack.hero.ctaLabel,
+    privacyNote: 'Sem spam. Cancele quando quiser.',
+    stats: pack.stats || [],
+  },
 });
 
 const about = (pack: ContentPack, title = 'Sobre nós'): AnySection => ({
@@ -258,6 +327,19 @@ function seedOf(slug: string): number {
 /** Escolhe variação 0/1/2 a partir do slug. */
 function pickVariation(slug: string, total = 3): number {
   return seedOf(slug) % total;
+}
+
+/**
+ * Escolhe a variante do hero (A–J) a partir do slug.
+ * Mapeia 10 visuais distintos:
+ *  A = split clássico,  B = bg image,     C = magazine,
+ *  D = dark premium,   E = service grid,  F = vitrine de cards,
+ *  G = gallery,        H = badge+circular, I = 60/40 assimétrico,
+ *  J = sticky-form (LP)
+ */
+function pickHeroVariant(slug: string): 'A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J' {
+  const variants: Array<'A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J'> = ['A','B','C','D','E','F','G','H','I','J'];
+  return variants[seedOf(slug) % variants.length];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -838,6 +920,23 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
     }
 
     // ═════════════════════════════════════════════════════════
+    // LANDING PAGES DE CONVERSÃO (lp-*)
+    // Layout FIXO (não sorteado): header → sticky-form hero →
+    // benefícios → prova social → FAQ → CTA final → footer mínimo.
+    // ─────────────────────────────────────────────────────────
+    case 'landing':
+      return [
+        header(pack),
+        heroStickyForm(pack),
+        services(pack, 'Por que funciona'),
+        ...(pack.stats ? [stats(pack, 'Em números')] : []),
+        ...(pack.testimonials ? [testimonials(pack, 'Quem já usa')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
+        cta(pack),
+        footer(),
+      ];
+
+    // ═════════════════════════════════════════════════════════
     // GENÉRICO (fallback)
     // ═════════════════════════════════════════════════════════
     case 'default':
@@ -921,5 +1020,6 @@ function pickKind(slug: string): string {
     limpeza: 'shop',
   };
   if (slug.startsWith('escritorio')) return 'lawyer';
+  if (slug.startsWith('lp-')) return 'landing';
   return map[slug] || 'default';
 }

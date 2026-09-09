@@ -32,7 +32,7 @@ export function Header({ content, theme, nav = [], siteName = 'Sua Empresa' }: R
 
   return (
     <header className={baseClass} style={{ ...styleVar, ['--c-bg' as any]: onDark ? theme.secondary : theme.background }}>
-      <div className="wrap nav-in">
+      <div className={`wrap nav-in variant-${variant}-inner`}>
         <a href="/" className="logo">
           {logo ? (
             <img src={logo} alt={siteName} />
@@ -40,15 +40,31 @@ export function Header({ content, theme, nav = [], siteName = 'Sua Empresa' }: R
             <span className="logo-text">{siteName}</span>
           )}
         </a>
-        <nav className="nav-links">
-          {links.map((l) => (
-            <a key={l.href} href={l.href}>{l.label}</a>
-          ))}
-        </nav>
-        <div className="nav-actions">
-          {phone && <a href={`tel:${phone.replace(/\D/g, '')}`} className="nav-phone">{phone}</a>}
-          <a href={waLink(whatsapp)} target="_blank" rel="noopener" className="nav-cta">{ctaText}</a>
-        </div>
+        {variant === 'minimal-line' ? (
+          // minimal-line: só o logo e 1 CTA, sem menu completo — pra LPs.
+          <div className="nav-actions">
+            <a href={waLink(whatsapp) || '#'} target="_blank" rel="noopener" className="nav-cta">{ctaText}</a>
+          </div>
+        ) : variant === 'floating-pill' ? (
+          // floating-pill: nav dentro de uma pílula arredondada flutuante.
+          <nav className="nav-pill">
+            {links.map((l) => (
+              <a key={l.href} href={l.href}>{l.label}</a>
+            ))}
+          </nav>
+        ) : (
+          <>
+            <nav className="nav-links">
+              {links.map((l) => (
+                <a key={l.href} href={l.href}>{l.label}</a>
+              ))}
+            </nav>
+            <div className="nav-actions">
+              {phone && <a href={`tel:${phone.replace(/\D/g, '')}`} className="nav-phone">{phone}</a>}
+              <a href={waLink(whatsapp)} target="_blank" rel="noopener" className="nav-cta">{ctaText}</a>
+            </div>
+          </>
+        )}
       </div>
       <style>{headerStyles}</style>
     </header>
@@ -105,6 +121,47 @@ const headerStyles = `
   width: 100%;
 }
 .site-header.variant-sticky-dark { position: sticky; background: rgba(15,23,42,0.98); }
+
+/* minimal-line: sem padding lateral, sem menu, só logo + CTA */
+.site-header.variant-minimal-line { padding: 14px 0; }
+.site-header.variant-minimal-line .wrap.nav-in { padding: 0 24px; }
+.site-header.variant-minimal-line .nav-actions { margin-left: auto; }
+
+/* floating-pill: nav dentro de pílula arredondada flutuante no centro */
+.site-header.variant-floating-pill { background: transparent; border: none; }
+.site-header.variant-floating-pill .wrap.nav-in { padding: 14px 0; }
+.site-header.variant-floating-pill .nav-pill {
+  display: flex;
+  gap: 4px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 999px;
+  padding: 6px;
+  margin: 0 auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+.site-header.variant-floating-pill.on-dark .nav-pill {
+  background: rgba(15,23,42,0.7);
+  border-color: rgba(255,255,255,0.12);
+}
+.site-header.variant-floating-pill .nav-pill a {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 14px;
+  text-decoration: none;
+  color: inherit;
+  opacity: 0.85;
+  transition: background 0.15s, opacity 0.15s;
+}
+.site-header.variant-floating-pill .nav-pill a:hover {
+  background: rgba(0,0,0,0.04);
+  opacity: 1;
+}
+.site-header.variant-floating-pill.on-dark .nav-pill a:hover {
+  background: rgba(255,255,255,0.08);
+}
 
 @media (max-width: 768px) {
   .site-header .nav-links { display: none; }

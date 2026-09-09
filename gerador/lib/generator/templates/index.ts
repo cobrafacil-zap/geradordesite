@@ -24,7 +24,7 @@ export interface TemplatePreset {
 export interface Template {
   slug: string;
   name: string;
-  category: 'institucional' | 'servicos' | 'comercio' | 'profissionais';
+  category: 'institucional' | 'servicos' | 'comercio' | 'profissionais' | 'landing-pages';
   segment: string;
   description: string;
   thumb: string;
@@ -957,7 +957,113 @@ const consultor: Template = {
 };
 
 // ─────────────────────────────────────────────────────────────────
-// Registry — 30 templates
+// LANDING PAGES DE CONVERSÃO (5) — lp-*
+// Layout fixo em layouts.ts (case 'landing'); não sorteado.
+// Imagem hero vazia — usuário adiciona via aba Imagens do editor.
+// ─────────────────────────────────────────────────────────────────
+
+const lpLeadMagnet: Template = {
+  slug: 'lp-lead-magnet',
+  name: 'LP Lead Magnet',
+  category: 'landing-pages',
+  segment: 'lead-magnet',
+  description: 'Captura de e-mail para ebook, webinar ou free trial.',
+  thumb: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=1600&q=80&auto=format&fit=crop',
+  defaultTheme: { primary: '#0a0a0f', secondary: '#7c3aed', accent: '#22d3ee', style: 'moderno' },
+  variants: { hero: 'J', header: 'minimal-line', footer: 'minimal' },
+  pages: buildPages([
+    ['/', 'Início', ['Header', 'Hero', 'Services', 'Differentials', 'Stats', 'Testimonials', 'FAQ', 'CTA', 'Footer']],
+  ]),
+  preset: {
+    company: 'Lead Magnet',
+    slogan: 'Receba o material gratuito',
+    about: 'Material gratuito',
+    segment: 'Lead Magnet',
+  },
+};
+
+const lpProdutoUnico: Template = {
+  slug: 'lp-produto-unico',
+  name: 'LP Produto Único',
+  category: 'landing-pages',
+  segment: 'produto-unico',
+  description: 'Vende 1 produto/serviço com preço e CTA direto.',
+  thumb: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1600&q=80&auto=format&fit=crop',
+  defaultTheme: { primary: '#111118', secondary: '#f97316', accent: '#facc15', style: 'impactante' },
+  variants: { hero: 'J', header: 'minimal-line', footer: 'minimal' },
+  pages: buildPages([
+    ['/', 'Início', ['Header', 'Hero', 'Services', 'Differentials', 'Stats', 'Testimonials', 'FAQ', 'CTA', 'Footer']],
+  ]),
+  preset: {
+    company: 'Produto Único',
+    slogan: 'O produto resolve o problema',
+    about: 'Produto de qualidade premium',
+    segment: 'Produto Único',
+  },
+};
+
+const lpWaitlist: Template = {
+  slug: 'lp-waitlist',
+  name: 'LP Waitlist',
+  category: 'landing-pages',
+  segment: 'waitlist',
+  description: 'Lista de espera para lançamento com vagas limitadas.',
+  thumb: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=1600&q=80&auto=format&fit=crop',
+  defaultTheme: { primary: '#0c0a09', secondary: '#fb923c', accent: '#fbbf24', style: 'moderno' },
+  variants: { hero: 'J', header: 'minimal-line', footer: 'minimal' },
+  pages: buildPages([
+    ['/', 'Início', ['Header', 'Hero', 'Services', 'Differentials', 'Stats', 'FAQ', 'CTA', 'Footer']],
+  ]),
+  preset: {
+    company: 'Lista de Espera',
+    slogan: 'Garanta seu lugar',
+    about: 'Lista de espera para lançamento',
+    segment: 'Waitlist',
+  },
+};
+
+const lpAgendamento: Template = {
+  slug: 'lp-agendamento',
+  name: 'LP Agendamento',
+  category: 'landing-pages',
+  segment: 'agendamento',
+  description: 'Booking de serviço/consulta com CTA WhatsApp.',
+  thumb: 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=1600&q=80&auto=format&fit=crop',
+  defaultTheme: { primary: '#16a34a', secondary: '#052e16', accent: '#22c55e', style: 'moderno' },
+  variants: { hero: 'J', header: 'minimal-line', footer: 'minimal' },
+  pages: buildPages([
+    ['/', 'Início', ['Header', 'Hero', 'Services', 'Differentials', 'Stats', 'Testimonials', 'FAQ', 'CTA', 'Footer']],
+  ]),
+  preset: {
+    company: 'Agendamento',
+    slogan: 'Agende seu horário',
+    about: 'Agendamento por WhatsApp',
+    segment: 'Agendamento',
+  },
+};
+
+const lpEvento: Template = {
+  slug: 'lp-evento',
+  name: 'LP Evento',
+  category: 'landing-pages',
+  segment: 'evento',
+  description: 'Conferência/workshop com data, local e programação.',
+  thumb: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1600&q=80&auto=format&fit=crop',
+  defaultTheme: { primary: '#0f172a', secondary: '#1e293b', accent: '#a855f7', style: 'premium' },
+  variants: { hero: 'J', header: 'minimal-line', footer: 'minimal' },
+  pages: buildPages([
+    ['/', 'Início', ['Header', 'Hero', 'Services', 'Differentials', 'Stats', 'Testimonials', 'FAQ', 'CTA', 'Footer']],
+  ]),
+  preset: {
+    company: 'Evento',
+    slogan: 'O evento do ano',
+    about: 'Conferência anual',
+    segment: 'Evento',
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Registry — 35 templates
 // ─────────────────────────────────────────────────────────────────
 
 export const TEMPLATES: Template[] = [
@@ -971,6 +1077,8 @@ export const TEMPLATES: Template[] = [
   loja, restaurante, pizzaria, padaria, academia, petShop, fotografo,
   // PROFISSIONAIS (5)
   advogado, contador, corretor, personalTrainer, consultor,
+  // LANDING PAGES DE CONVERSÃO (5)
+  lpLeadMagnet, lpProdutoUnico, lpWaitlist, lpAgendamento, lpEvento,
 ];
 
 export const CATEGORIES = [
@@ -978,6 +1086,7 @@ export const CATEGORIES = [
   { id: 'servicos', name: 'Serviços' },
   { id: 'comercio', name: 'Comércio' },
   { id: 'profissionais', name: 'Profissionais Liberais' },
+  { id: 'landing-pages', name: 'Landing Pages' },
 ] as const;
 
 export function getTemplate(slug: string): Template | undefined {

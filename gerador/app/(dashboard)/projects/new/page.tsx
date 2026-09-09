@@ -23,6 +23,7 @@ const SEGMENTS = [
   { id: 'servicos', name: 'Serviços', emoji: '🛠️', desc: 'Clínicas, oficinas, agências' },
   { id: 'comercio', name: 'Comércio', emoji: '🛒', desc: 'Lojas, restaurantes, padarias' },
   { id: 'profissionais', name: 'Profissionais', emoji: '👔', desc: 'Advogados, contadores, consultores' },
+  { id: 'landing-pages', name: 'Landing Pages', emoji: '🚀', desc: 'Captura de lead, venda direta, eventos' },
 ];
 
 interface DraftProject {
@@ -548,5 +549,12 @@ const TEMPLATES_BY_SEGMENT: Record<string, Array<{ slug: string; name: string; t
     { slug: 'corretor', name: 'Corretor de Imóveis', tag: 'Imobiliário', emoji: '🔑', color: '#0891b2' },
     { slug: 'personal-trainer', name: 'Personal Trainer', tag: 'Fitness', emoji: '🏋️', color: '#16a34a' },
     { slug: 'consultor', name: 'Consultor / Autônomo', tag: 'Consultoria', emoji: '🎯', color: '#7c3aed' },
+  ],
+  'landing-pages': [
+    { slug: 'lp-lead-magnet', name: 'LP Lead Magnet', tag: 'Captura de e-mail', emoji: '📩', color: '#7c3aed' },
+    { slug: 'lp-produto-unico', name: 'LP Produto Único', tag: 'Venda direta', emoji: '🎯', color: '#f97316' },
+    { slug: 'lp-waitlist', name: 'LP Waitlist', tag: 'Lista de espera', emoji: '🚀', color: '#fb923c' },
+    { slug: 'lp-agendamento', name: 'LP Agendamento', tag: 'Booking WhatsApp', emoji: '📅', color: '#16a34a' },
+    { slug: 'lp-evento', name: 'LP Evento', tag: 'Conferência / workshop', emoji: '🎪', color: '#a855f7' },
   ],
 };

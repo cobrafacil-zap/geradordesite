@@ -10,6 +10,7 @@ const CATEGORIES = [
   { id: 'servicos', name: 'Serviços' },
   { id: 'comercio', name: 'Comércio' },
   { id: 'profissionais', name: 'Profissionais' },
+  { id: 'landing-pages', name: 'Landing Pages' },
 ];
 
 export default function ModelsPage() {
@@ -47,6 +48,11 @@ export default function ModelsPage() {
     { slug: 'corretor', name: 'Corretor de Imóveis', category: 'profissionais', tag: 'Imobiliário', emoji: '🔑', color: '#0891b2' },
     { slug: 'personal-trainer', name: 'Personal Trainer', category: 'profissionais', tag: 'Fitness', emoji: '🏋️', color: '#16a34a' },
     { slug: 'consultor', name: 'Consultor / Autônomo', category: 'profissionais', tag: 'Consultoria', emoji: '🎯', color: '#7c3aed' },
+    { slug: 'lp-lead-magnet', name: 'LP Lead Magnet', category: 'landing-pages', tag: 'Captura de e-mail', emoji: '📩', color: '#7c3aed' },
+    { slug: 'lp-produto-unico', name: 'LP Produto Único', category: 'landing-pages', tag: 'Venda direta', emoji: '🎯', color: '#f97316' },
+    { slug: 'lp-waitlist', name: 'LP Waitlist', category: 'landing-pages', tag: 'Lista de espera', emoji: '🚀', color: '#fb923c' },
+    { slug: 'lp-agendamento', name: 'LP Agendamento', category: 'landing-pages', tag: 'Booking WhatsApp', emoji: '📅', color: '#16a34a' },
+    { slug: 'lp-evento', name: 'LP Evento', category: 'landing-pages', tag: 'Conferência / workshop', emoji: '🎪', color: '#a855f7' },
   ];
 
   const filtered = templates
@@ -57,7 +63,7 @@ export default function ModelsPage() {
     <div className="px-8 py-8 max-w-7xl">
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-fg mb-1">Modelos</h1>
-        <p className="text-fg-muted">{templates.length} templates com identidade própria em 4 categorias.</p>
+        <p className="text-fg-muted">{templates.length} templates com identidade própria em 5 categorias.</p>
       </header>
 
       <div className="flex flex-col md:flex-row gap-3 mb-6">

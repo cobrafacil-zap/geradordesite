@@ -44,6 +44,11 @@ const TEMPLATE_NAMES: Record<string, string> = {
   'corretor': 'Corretor de Imóveis',
   'personal-trainer': 'Personal Trainer',
   'consultor': 'Consultor / Autônomo',
+  'lp-lead-magnet': 'LP Lead Magnet',
+  'lp-produto-unico': 'LP Produto Único',
+  'lp-waitlist': 'LP Waitlist',
+  'lp-agendamento': 'LP Agendamento',
+  'lp-evento': 'LP Evento',
 };
 
 export async function GET(_req: NextRequest, { params }: { params: { slug: string } }) {

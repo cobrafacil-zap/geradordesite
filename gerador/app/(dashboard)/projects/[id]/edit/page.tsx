@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import { Icon } from '@/components/dashboard/sidebar';
 import { siteRendererToHtml } from '@/lib/generator/render/site-renderer-html';
 
-type TabId = 'content' | 'sections' | 'theme' | 'seo' | 'ai';
+type TabId = 'content' | 'sections' | 'theme' | 'seo' | 'ai' | 'images';
 
 interface Version {
   schema: any;
@@ -20,6 +20,7 @@ const TABS: Array<{ id: TabId; label: string; icon: string }> = [
   { id: 'sections', label: 'Seções', icon: 'layers' },
   { id: 'theme', label: 'Tema', icon: 'palette' },
   { id: 'seo', label: 'SEO', icon: 'search' },
+  { id: 'images', label: 'Imagens', icon: 'image' },
   { id: 'ai', label: 'IA', icon: 'sparkles' },
 ];
 
@@ -423,6 +424,9 @@ export default function EditorPage() {
           )}
           {tab === 'seo' && currentPage && (
             <SeoTab schema={schema} pageIdx={selectedPageIdx} onChange={updateSchema} />
+          )}
+          {tab === 'images' && (
+            <ImagesTab schema={schema} onChange={updateSchema} />
           )}
           {tab === 'ai' && (
             <AITab schema={schema} onApply={(s: any) => { setSchema(s); autosave(s); setPreviewKey((k) => k + 1); }} />
@@ -898,6 +902,197 @@ function GenerationPanel({ steps, onClose }: { steps: any[]; onClose: () => void
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// IMAGES TAB — lista todas as imagens referenciadas no schema e
+// permite trocar cada uma por upload ou URL externa. As URLs originais
+// são salvas em schema._originalImages[path] na primeira troca para
+// permitir "Restaurar original".
+// ─────────────────────────────────────────────────────────────────
+
+function ImagesTab({ schema, onChange }: { schema: any; onChange: (mut: (s: any) => void) => void }) {
+  const { getReferencedImages, setAtPath } = require('@/lib/generator/templates/components/registry') as {
+    getReferencedImages: (s: any) => Array<{ path: string; current: string; alt?: string; context: string }>;
+    setAtPath: (o: any, p: string, v: any) => any;
+  };
+  const refs = useMemo(() => getReferencedImages(schema), [schema]);
+  const [editingPath, setEditingPath] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'url' | 'upload'>('upload');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  function replaceImage(path: string, newUrl: string) {
+    if (!newUrl) return;
+    onChange((s: any) => {
+      // Salva a URL original na primeira troca (para "Restaurar")
+      if (!s._originalImages) s._originalImages = {};
+      if (!s._originalImages[path]) {
+        // Pega o valor atual antes de substituir
+        const original = path.split('.').reduce((o: any, k: string) => {
+          const m = k.match(/^(\w+)\[(\d+)\]$/);
+          if (m) return o?.[m[1]]?.[Number(m[2])];
+          return o?.[k];
+        }, s);
+        s._originalImages[path] = typeof original === 'string' ? original : '';
+      }
+      // Aplica o patch
+      const next = setAtPath(s, path, newUrl);
+      Object.assign(s, next);
+    });
+    setEditingPath(null);
+    setEditValue('');
+  }
+
+  function restoreOriginal(path: string) {
+    const original = schema._originalImages?.[path];
+    if (typeof original !== 'string') return;
+    onChange((s: any) => {
+      const next = setAtPath(s, path, original);
+      Object.assign(s, next);
+    });
+  }
+
+  function startEdit(path: string, current: string) {
+    setEditingPath(path);
+    setEditValue(current);
+    setMode('upload');
+    setUploadError(null);
+  }
+
+  async function handleUpload(file: File) {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/assets/upload', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const url = data.url || data.asset?.url;
+      if (!url) throw new Error('resposta sem URL');
+      if (editingPath) replaceImage(editingPath, url);
+    } catch (e: any) {
+      setUploadError(e?.message || 'Falha no upload');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold text-fg mb-1">Imagens do site</h3>
+        <p className="text-xs text-fg-muted">
+          {refs.length === 0
+            ? 'Nenhuma imagem encontrada no schema. Faça upload para uma seção ou peça para a IA adicionar placeholders.'
+            : `${refs.length} ${refs.length === 1 ? 'imagem referenciada' : 'imagens referenciadas'} no schema. Troque sem depender da IA.`}
+        </p>
+      </div>
+
+      {refs.length === 0 && (
+        <Card className="!p-6 text-center">
+          <div className="text-3xl mb-2">🖼️</div>
+          <p className="text-sm text-fg-muted">
+            As imagens aparecem aqui automaticamente quando o site tem seções com hero, galeria, equipe, etc.
+          </p>
+        </Card>
+      )}
+
+      <div className="space-y-2">
+        {refs.map((r) => {
+          const isEdited = schema._originalImages && r.path in schema._originalImages && schema._originalImages[r.path] !== r.current;
+          const isEditing = editingPath === r.path;
+          return (
+            <Card key={r.path} className="!p-3">
+              <div className="flex gap-3">
+                <div className="w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-bg-elev2 border border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={r.current} alt={r.alt || ''} className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-fg truncate" title={r.context}>{r.context}</div>
+                  <div className="text-[10px] text-fg-muted truncate font-mono mt-0.5" title={r.path}>{r.path}</div>
+                  {r.alt && <div className="text-[10px] text-fg-muted truncate mt-0.5">alt: {r.alt}</div>}
+                  <div className="flex gap-2 mt-2">
+                    <Button size="sm" variant="secondary" onClick={() => startEdit(r.path, r.current)}>
+                      Trocar
+                    </Button>
+                    {isEdited && (
+                      <Button size="sm" variant="ghost" onClick={() => restoreOriginal(r.path)}>
+                        ↺ Restaurar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {isEditing && (
+                <div className="mt-3 pt-3 border-t border-border space-y-2">
+                  <div className="flex gap-1 bg-bg-elev rounded p-0.5 border border-border w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setMode('upload')}
+                      className={`px-2 py-1 text-xs rounded ${mode === 'upload' ? 'bg-bg-elev2 text-fg' : 'text-fg-muted'}`}
+                    >
+                      Upload
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode('url')}
+                      className={`px-2 py-1 text-xs rounded ${mode === 'url' ? 'bg-bg-elev2 text-fg' : 'text-fg-muted'}`}
+                    >
+                      URL
+                    </button>
+                  </div>
+
+                  {mode === 'upload' ? (
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleUpload(f);
+                        }}
+                      />
+                      <Button size="sm" variant="secondary" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+                        {uploading ? 'Enviando…' : 'Escolher arquivo…'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        type="url"
+                        placeholder="https://..."
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="flex-1 text-xs"
+                      />
+                      <Button size="sm" onClick={() => replaceImage(r.path, editValue)} disabled={!editValue}>
+                        Aplicar
+                      </Button>
+                    </div>
+                  )}
+                  {uploadError && <div className="text-xs text-red-500">{uploadError}</div>}
+                  <Button size="sm" variant="ghost" onClick={() => setEditingPath(null)}>
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }

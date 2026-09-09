@@ -65,7 +65,7 @@ export interface TemplateRecord {
   id: string;
   slug: string;
   name: string;
-  category: 'institucional' | 'servicos' | 'comercio' | 'profissionais';
+  category: 'institucional' | 'servicos' | 'comercio' | 'profissionais' | 'landing-pages';
   segment: string;
   description: string;
   default_theme: any;

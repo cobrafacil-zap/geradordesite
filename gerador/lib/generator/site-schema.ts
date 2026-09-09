@@ -109,7 +109,7 @@ export const SiteSchema = z.object({
   pages: z.array(PageSchema).min(1),
   seo: SeoSchema.default({ siteUrl: '', defaultDescription: '' }),
   settings: SettingsSchema.default({ social: {} }),
-});
+}).passthrough(); // permite campos não-canônicos (ex: _originalImages na aba Imagens)
 export type Site = z.infer<typeof SiteSchema>;
 
 // ─────────────────────────────────────────────────────────────────
@@ -209,7 +209,9 @@ export function siteSchemaForTemplate(templateSlug: string, tradeName: string): 
         border: '#e5e7eb',
       };
 
-  return withDefaults({
+  const isLanding = templateSlug.startsWith('lp-');
+
+  const site = withDefaults({
     site: {
       name: siteName,
       trade: siteName,
@@ -224,49 +226,62 @@ export function siteSchemaForTemplate(templateSlug: string, tradeName: string): 
       radius: '8px',
       style: isDark ? 'dark-premium' : 'moderno',
     },
-    navigation: [
-      { label: 'Início', href: '/' },
-      { label: 'Sobre', href: '/sobre' },
-      { label: 'Serviços', href: '/servicos' },
-      { label: 'Contato', href: '#contato' },
-    ],
-    pages: [
-      {
-        slug: '/', name: 'Início', title: siteName,
-        description: pack.tagline,
-        sections: homeSections,
-      },
-      {
-        slug: '/sobre', name: 'Sobre', title: 'Sobre', description: 'Sobre a ' + siteName,
-        sections: [
-          { component: 'HeroSimple', variant: 'simple', content: { title: 'Sobre nós', subtitle: pack.tagline } },
-          { component: 'About', variant: 'simple', content: { title: 'Nossa história', text: pack.aboutText } },
-          ...(pack.team && pack.team.length
-            ? [{ component: 'Team', variant: 'default', content: { title: 'Nosso time', items: pack.team } }]
-            : []),
-          { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
+    navigation: isLanding
+      ? [
+          { label: 'Início', href: '/' },
+          { label: 'Garantir vaga', href: '#captura' },
+        ]
+      : [
+          { label: 'Início', href: '/' },
+          { label: 'Sobre', href: '/sobre' },
+          { label: 'Serviços', href: '/servicos' },
+          { label: 'Contato', href: '#contato' },
         ],
-      },
-      {
-        slug: '/servicos', name: 'Serviços', title: 'Serviços', description: 'Nossos serviços',
-        sections: [
-          { component: 'HeroSimple', variant: 'simple', content: { title: 'Serviços', subtitle: 'Conheça tudo o que podemos fazer por você' } },
-          { component: 'Services', variant: 'grid', content: { title: 'Serviços', items: pack.services } },
-          ...(pack.differentials && pack.differentials.length
-            ? [{ component: 'Differentials', variant: 'default', content: { title: 'Por que nos escolher', items: pack.differentials } }]
-            : []),
-          { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
+    pages: isLanding
+      ? [
+          {
+            slug: '/', name: 'Início', title: siteName,
+            description: pack.tagline,
+            sections: homeSections,
+          },
+        ]
+      : [
+          {
+            slug: '/', name: 'Início', title: siteName,
+            description: pack.tagline,
+            sections: homeSections,
+          },
+          {
+            slug: '/sobre', name: 'Sobre', title: 'Sobre', description: 'Sobre a ' + siteName,
+            sections: [
+              { component: 'HeroSimple', variant: 'simple', content: { title: 'Sobre nós', subtitle: pack.tagline } },
+              { component: 'About', variant: 'simple', content: { title: 'Nossa história', text: pack.aboutText } },
+              ...(pack.team && pack.team.length
+                ? [{ component: 'Team', variant: 'default', content: { title: 'Nosso time', items: pack.team } }]
+                : []),
+              { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
+            ],
+          },
+          {
+            slug: '/servicos', name: 'Serviços', title: 'Serviços', description: 'Nossos serviços',
+            sections: [
+              { component: 'HeroSimple', variant: 'simple', content: { title: 'Serviços', subtitle: 'Conheça tudo o que podemos fazer por você' } },
+              { component: 'Services', variant: 'grid', content: { title: 'Serviços', items: pack.services } },
+              ...(pack.differentials && pack.differentials.length
+                ? [{ component: 'Differentials', variant: 'default', content: { title: 'Por que nos escolher', items: pack.differentials } }]
+                : []),
+              { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
+            ],
+          },
+          {
+            slug: '#contato', name: 'Contato', title: 'Contato', description: 'Fale com ' + siteName,
+            sections: [
+              { component: 'HeroSimple', variant: 'simple', content: { title: 'Contato', subtitle: 'Estamos prontos para te atender' } },
+              { component: 'Contact', variant: 'simple', content: { title: 'Fale conosco', whatsapp: pack.whatsapp, email: pack.email, address: pack.address } },
+              { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
+            ],
+          },
         ],
-      },
-      {
-        slug: '#contato', name: 'Contato', title: 'Contato', description: 'Fale com ' + siteName,
-        sections: [
-          { component: 'HeroSimple', variant: 'simple', content: { title: 'Contato', subtitle: 'Estamos prontos para te atender' } },
-          { component: 'Contact', variant: 'simple', content: { title: 'Fale conosco', whatsapp: pack.whatsapp, email: pack.email, address: pack.address } },
-          { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
-        ],
-      },
-    ],
     seo: {
       siteUrl: 'https://' + (lower || templateSlug) + '.com.br',
       defaultDescription: pack.tagline,
@@ -284,6 +299,10 @@ export function siteSchemaForTemplate(templateSlug: string, tradeName: string): 
       },
     },
   });
+  // Garante o campo não-canônico `_originalImages` para a aba Imagens do editor.
+  // Mantém o shape { [pathDaImagemNoSchema]: urlOriginal } para "Restaurar".
+  (site as any)._originalImages = (site as any)._originalImages || {};
+  return site;
 }
 
 // ─────────────────────────────────────────────────────────────────

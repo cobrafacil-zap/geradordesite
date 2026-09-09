@@ -78,6 +78,7 @@ import { GROUP_3 } from './group-3';
 import { GROUP_4 } from './group-4';
 import { GROUP_5 } from './group-5';
 import { GROUP_6 } from './group-6';
+import { GROUP_7 } from './group-7';
 
 export const PACKS: Record<string, ContentPack> = {
   ...GROUP_1,
@@ -86,6 +87,7 @@ export const PACKS: Record<string, ContentPack> = {
   ...GROUP_4,
   ...GROUP_5,
   ...GROUP_6,
+  ...GROUP_7,
 };
 
 /** Pega o pack de um slug ou devolve um fallback genérico. */
