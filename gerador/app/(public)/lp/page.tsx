@@ -7,7 +7,7 @@
  */
 import type { Metadata } from 'next';
 import { waLink, WHATSAPP } from './wa';
-import { PUBLIC_MODELS } from './data';
+import { PUBLIC_MODELS, TOTAL_MODELS, MSG_VER_TODOS } from './data';
 import { ModelCardPublic } from './_components/ModelCardPublic';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Social Marketing BR — Sites prontos em 48h por R$ 197',
   description:
-    'Sites profissionais, responsivos, com domínio e hospedagem inclusos. 5 modelos prontos, prontos em menos de 48h, sem mensalidade. R$ 197.',
+    'Sites profissionais, responsivos, com domínio e hospedagem inclusos. Mais de 30 modelos prontos, prontos em menos de 48h, sem mensalidade. R$ 197.',
 };
 
 const MSG_HERO = 'Olá! Vi o site da Social Marketing BR e quero fazer meu site por R$ 197 (pronto em 48h). Pode me passar mais informações?';
@@ -120,7 +120,7 @@ export default function LpPage() {
               href="#modelos"
               className="inline-flex items-center gap-2 px-6 py-3.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700 text-slate-100 text-base font-medium transition-colors w-full sm:w-auto justify-center"
             >
-              Ver 5 modelos prontos →
+              Ver modelos prontos →
             </a>
           </div>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs md:text-sm text-slate-400">
@@ -149,19 +149,46 @@ export default function LpPage() {
           </div>
         </section>
 
-        {/* 5 modelos prontos */}
+        {/* Modelos prontos */}
         <section id="modelos" className="pb-20 scroll-mt-20">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">5 modelos prontos pra você escolher</h2>
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium mb-4">
+              <span>+{TOTAL_MODELS} modelos disponíveis</span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+              Alguns dos nossos modelos prontos
+            </h2>
             <p className="text-slate-400 max-w-2xl mx-auto">
-              Todos funcionais. Clique num card pra ver o site real, ou já chama no WhatsApp pra
-              adaptar pro seu negócio.
+              Selecionamos {PUBLIC_MODELS.length} modelos diferentes pra você ver. Passa o mouse
+              pra ver o site real, ou chama no WhatsApp pra ver a lista completa.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {PUBLIC_MODELS.map((m) => (
               <ModelCardPublic key={m.slug} model={m} />
             ))}
+          </div>
+          <div className="mt-10 text-center">
+            <div className="inline-flex flex-col sm:flex-row items-center gap-3 p-4 rounded-2xl bg-slate-900/50 border border-slate-800 backdrop-blur">
+              <div className="flex -space-x-2 text-2xl">
+                <span className="w-9 h-9 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center">🍕</span>
+                <span className="w-9 h-9 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center">⚖️</span>
+                <span className="w-9 h-9 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center">🏪</span>
+                <span className="w-9 h-9 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center">💼</span>
+                <span className="w-9 h-9 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center">+</span>
+              </div>
+              <p className="text-sm text-slate-300">
+                Tem mais <span className="text-emerald-400 font-semibold">+{TOTAL_MODELS - PUBLIC_MODELS.length} modelos</span> que não couberam aqui.
+              </p>
+              <a
+                href={waLink(WHATSAPP, MSG_VER_TODOS)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#25D366] hover:bg-[#1DA851] text-white text-sm font-semibold transition-colors"
+              >
+                💬 Ver todos no WhatsApp
+              </a>
+            </div>
           </div>
         </section>
 
