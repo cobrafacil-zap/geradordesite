@@ -58,10 +58,16 @@ export async function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
     const publicPath = isPublic(pathname);
 
-    // Comportamento de redirect foi removido: rotas protegidas (incluindo
-    // /admin/*) são renderizadas e o layout Server decide o que fazer.
-    // Se a sessão existir e o usuário está em /login ou /, manda pro admin.
-    if (session && (pathname === '/login' || pathname === '/')) {
+    // Raiz / sempre vai pra LP pública. Visitante e logado caem na LP —
+    // o dono do painel usa /admin/dashboard direto (não passa por /).
+    if (pathname === '/') {
+      return NextResponse.redirect(new URL('/lp', request.url));
+    }
+
+    // /login é página pública. Se o usuário está logado e cai em /login,
+    // manda pro admin. (Sem redirect pra /login a partir de rotas
+    // protegidas — /admin/* responde 404 via notFound() no layout.)
+    if (session && pathname === '/login') {
       return NextResponse.redirect(new URL('/admin/dashboard', request.url));
     }
   } catch (err) {

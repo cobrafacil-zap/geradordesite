@@ -12,8 +12,10 @@ const nextConfig = {
   },
   // Renomeação do painel para /admin (antigo /(dashboard)).
   // URLs antigas redirecionam 308 (permanente) para /admin/...
+  // A raiz / vai pra LP pública /lp.
   async redirects() {
     return [
+      { source: '/', destination: '/lp', permanent: false },
       { source: '/projects', destination: '/admin/projects', permanent: true },
       { source: '/projects/:path*', destination: '/admin/projects/:path*', permanent: true },
       { source: '/models', destination: '/admin/models', permanent: true },
