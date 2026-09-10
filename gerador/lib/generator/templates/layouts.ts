@@ -937,6 +937,57 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
       ];
 
     // ═════════════════════════════════════════════════════════
+    // CORPORATIVO TRADICIONAL (empresa-corporativa, indústria)
+    // Visual sério: hero full-bleed escuro + sobre com números
+    // + serviços em grid + clientes + contato.
+    // ─────────────────────────────────────────────────────────
+    case 'corporate': {
+      if (v === 0) {
+        return [
+          header(pack),
+          heroFullbleed(pack),
+          about(pack, 'A empresa'),
+          ...(pack.stats ? [stats(pack, 'Nossos números')] : []),
+          services(pack, 'O que oferecemos'),
+          differentials(pack, 'Nossos diferenciais'),
+          brands(pack, 'Quem confia'),
+          cta(pack),
+          contact(pack),
+          footer(),
+        ];
+      }
+      return [
+        header(pack),
+        heroAsymmetric(pack),
+        services(pack, 'Soluções'),
+        about(pack, 'Quem somos'),
+        differentials(pack, 'Por que nos escolher'),
+        ...(pack.stats ? [stats(pack, 'Resultados')] : []),
+        brands(pack, 'Clientes'),
+        cta(pack),
+        footer(),
+      ];
+    }
+
+    // ═════════════════════════════════════════════════════════
+    // PREMIUM / BOUTIQUE (empresa-premium, alto padrão)
+    // Visual escuro, refinado: hero com gradiente + vitrine +
+    // prova social minimalista + contato sóbrio.
+    // ─────────────────────────────────────────────────────────
+    case 'premium': {
+      return [
+        header(pack),
+        heroDarkPremium(pack),
+        differentials(pack, 'Excelência em cada detalhe'),
+        services(pack, 'Serviços exclusivos'),
+        ...(pack.testimonials ? [testimonials(pack, 'Depoimentos')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+    }
+
+    // ═════════════════════════════════════════════════════════
     // GENÉRICO (fallback)
     // ═════════════════════════════════════════════════════════
     case 'default':
@@ -988,6 +1039,8 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
 // Mapeamento slug → kind
 // ─────────────────────────────────────────────────────────────
 function pickKind(slug: string): string {
+  // Normaliza: remove hífens pra pegar 'escritorio-advocacia' como 'escritorioadvocacia'
+  const norm = slug.replace(/-/g, '');
   const map: Record<string, string> = {
     restaurante: 'restaurant',
     pizzaria: 'restaurant',
@@ -1003,7 +1056,9 @@ function pickKind(slug: string): string {
     encanador: 'emergency',
     mecanica: 'emergency',
     'assistencia-tecnica': 'emergency',
+    'empresa-corporativa': 'corporate',
     'empresa-moderna': 'saas',
+    'empresa-premium': 'premium',
     startup: 'saas',
     'agencia-marketing': 'saas',
     escritorio: 'lawyer',
@@ -1019,7 +1074,7 @@ function pickKind(slug: string): string {
     loja: 'shop',
     limpeza: 'shop',
   };
-  if (slug.startsWith('escritorio')) return 'lawyer';
+  if (norm.startsWith('escritorio')) return 'lawyer';
   if (slug.startsWith('lp-')) return 'landing';
-  return map[slug] || 'default';
+  return map[slug] || map[norm] || 'default';
 }

@@ -30,15 +30,26 @@ export type PublicModel = {
  * loja, restaurante, pet-shop, lp-* (5 do group-7).
  */
 export const PUBLIC_MODELS: PublicModel[] = [
-  // ── Grupo 1: Institucional / corporativo ──
+  // ── Kinds distintos pra visual bem diferente entre os 10 ──
+  // Sortidos: cada um cai em um 'kind' diferente do buildHomeSections()
+  // (corporate, premium, saas, lawyer, clinic, restaurant, realestate, shop, landing).
   {
     slug: 'empresa-corporativa',
     name: 'Empresa Corporativa',
-    tag: 'Institucional · Corporativo',
+    tag: 'Institucional · B2B',
     emoji: '🏢',
     color: '#1e3a8a',
     previewHeadline: 'Soluções que\nescalam seu negócio',
     whatsappMessage: 'Olá! Quero um site no modelo "Empresa Corporativa" (R$ 197, pronto em 48h). Pode me passar mais detalhes?',
+  },
+  {
+    slug: 'empresa-premium',
+    name: 'Empresa Premium',
+    tag: 'Boutique · Luxo',
+    emoji: '💎',
+    color: '#1f1f1f',
+    previewHeadline: 'Excelência em\ncada detalhe',
+    whatsappMessage: 'Olá! Quero um site no modelo "Empresa Premium" (R$ 197, pronto em 48h). Pode me passar mais detalhes?',
   },
   {
     slug: 'empresa-moderna',
@@ -49,16 +60,6 @@ export const PUBLIC_MODELS: PublicModel[] = [
     previewHeadline: 'Inovação que\nmove o mercado',
     whatsappMessage: 'Olá! Quero um site no modelo "Empresa Moderna" (R$ 197, pronto em 48h). Pode me passar mais detalhes?',
   },
-  {
-    slug: 'construtora',
-    name: 'Construtora',
-    tag: 'Obras · Imóveis',
-    emoji: '🏗️',
-    color: '#92400e',
-    previewHeadline: 'Construímos\nseu sonho',
-    whatsappMessage: 'Olá! Quero um site no modelo "Construtora" (R$ 197, pronto em 48h). Pode me passar mais detalhes?',
-  },
-  // ── Grupo 2: Profissionais liberais ──
   {
     slug: 'escritorio-advocacia',
     name: 'Advocacia',
@@ -77,17 +78,6 @@ export const PUBLIC_MODELS: PublicModel[] = [
     previewHeadline: 'Cuidando da sua\nsaúde com excelência',
     whatsappMessage: 'Olá! Quero um site no modelo "Clínica Médica" (R$ 197, pronto em 48h). Pode me passar mais detalhes?',
   },
-  // ── Grupo 3: Serviços técnicos ──
-  {
-    slug: 'agencia-marketing',
-    name: 'Agência de Marketing',
-    tag: 'Marketing · Publicidade',
-    emoji: '📊',
-    color: '#db2777',
-    previewHeadline: 'Resultados que\nviralizam',
-    whatsappMessage: 'Olá! Quero um site no modelo "Agência de Marketing" (R$ 197, pronto em 48h). Pode me passar mais detalhes?',
-  },
-  // ── Grupo 4: Comércio e imobiliária ──
   {
     slug: 'restaurante',
     name: 'Restaurante',
@@ -102,7 +92,7 @@ export const PUBLIC_MODELS: PublicModel[] = [
     name: 'Imobiliária',
     tag: 'Venda · Aluguel',
     emoji: '🏘️',
-    color: '#0891b2',
+    color: '#0d9488',
     previewHeadline: 'Seu novo lar\nestá aqui',
     whatsappMessage: 'Olá! Quero um site no modelo "Imobiliária" (R$ 197, pronto em 48h). Pode me passar mais detalhes?',
   },
@@ -111,17 +101,25 @@ export const PUBLIC_MODELS: PublicModel[] = [
     name: 'Loja',
     tag: 'E-commerce · Catálogo',
     emoji: '🛍️',
-    color: '#7c2d12',
+    color: '#f97316',
     previewHeadline: 'Compre com\npraticidade',
     whatsappMessage: 'Olá! Quero um site no modelo "Loja" (R$ 197, pronto em 48h). Pode me passar mais detalhes?',
   },
-  // ── Grupo 7: Landing pages de conversão ──
+  {
+    slug: 'agencia-marketing',
+    name: 'Agência de Marketing',
+    tag: 'Marketing · Publicidade',
+    emoji: '📊',
+    color: '#db2777',
+    previewHeadline: 'Resultados que\nviralizam',
+    whatsappMessage: 'Olá! Quero um site no modelo "Agência de Marketing" (R$ 197, pronto em 48h). Pode me passar mais detalhes?',
+  },
   {
     slug: 'lp-produto-unico',
     name: 'Produto Único',
     tag: 'Venda direta · Preço',
     emoji: '🎯',
-    color: '#f97316',
+    color: '#7c2d12',
     previewHeadline: 'Compre agora\nem 12x sem juros',
     whatsappMessage: 'Olá! Quero um site no modelo "Produto Único" (R$ 197, pronto em 48h). Pode me passar mais detalhes?',
   },
