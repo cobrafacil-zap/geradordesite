@@ -2,7 +2,11 @@
  * Layout do painel admin (Sistema A).
  * Verifica auth via Supabase. Se não houver sessão válida E Supabase
  * estiver configurado, retorna 404 (notFound()) em vez de redirecionar pra
- * /login — isso evita "denunciar" que existe um painel em /admin.
+ * /admin/login — isso evita "denunciar" que existe um painel em /admin.
+ *
+ * IMPORTANTE: o /admin/login fica FORA deste group (em app/admin/login/)
+ * pra não cair no notFound() deste layout. O caminho é /admin/login mas
+ * a pasta não está em app/(admin)/.
  *
  * Em dev (Supabase não configurado) → libera direto com userName=userEmail
  * mockados, pra não atrapalhar o desenvolvimento.

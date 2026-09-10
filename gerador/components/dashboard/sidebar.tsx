@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 const NAV = [
   { href: '/', label: 'Dashboard', icon: 'home' },
   { href: '/projects', label: 'Projetos', icon: 'folder' },
+  { href: '/briefings', label: 'Briefings', icon: 'clipboard' },
   { href: '/models', label: 'Modelos', icon: 'grid' },
   { href: '/clients', label: 'Clientes', icon: 'users' },
   { href: '/media', label: 'Biblioteca', icon: 'image' },
@@ -18,7 +19,7 @@ export function Sidebar({ userName, userEmail }: { userName?: string; userEmail?
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
+    router.push('/admin/login');
     router.refresh();
   }
 
@@ -121,6 +122,7 @@ export function Icon({ name, size = 18 }: { name: string; size?: number }) {
     case 'layers': return <svg {...props}><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>;
     case 'search': return <svg {...props}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>;
     case 'menu': return <svg {...props}><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>;
+    case 'clipboard': return <svg {...props}><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 12h6" /><path d="M9 16h4" /></svg>;
     default: return null;
   }
 }

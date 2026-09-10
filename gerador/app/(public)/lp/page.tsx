@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Social Marketing BR — Sites prontos em 48h por R$ 197',
   description:
-    'Sites profissionais, responsivos, com domínio e hospedagem inclusos. Mais de 30 modelos prontos, prontos em menos de 48h, sem mensalidade. R$ 197.',
+    'Sites profissionais, responsivos, prontos em menos de 48h. Mais de 30 modelos prontos, pagamento único de R$ 197, sem mensalidade.',
 };
 
 const MSG_HERO = 'Olá! Vi o site da Social Marketing BR e quero fazer meu site por R$ 197 (pronto em 48h). Pode me passar mais informações?';
@@ -33,27 +33,27 @@ const FEATURES = [
     desc: 'Após o briefing, seu site fica pronto em menos de 48 horas. Você aprova antes de publicar.',
   },
   {
-    emoji: '🌐',
-    title: 'Domínio + hospedagem',
-    desc: 'Domínio .com.br e 1 ano de hospedagem inclusos. Você não precisa se preocupar com nada técnico.',
+    emoji: '📦',
+    title: 'Sem mensalidade',
+    desc: 'Pagamento único de R$ 197. Sem assinatura, sem renovação obrigatória, sem pegadinha no contrato.',
   },
 ];
 
 const STEPS = [
-  { n: '1', title: 'Briefing rápido', desc: 'Você me conta o que precisa por WhatsApp (5-10 min).' },
+  { n: '1', title: 'Briefing rápido', desc: 'Você responde 8 perguntas rápidas (5-10 min) por um link que te mando no WhatsApp.' },
   { n: '2', title: 'Produção em 48h', desc: 'A gente monta seu site com base em um dos modelos prontos.' },
-  { n: '3', title: 'Aprovação e entrega', desc: 'Você vê, aprova e o site vai pro ar. Domínio e hospedagem inclusos.' },
+  { n: '3', title: 'Aprovação e entrega', desc: 'Você vê, aprova e recebe o site pronto pra colocar no ar.' },
 ];
 
 const INCLUDED = [
-  'Domínio .com.br no primeiro ano',
-  '1 ano de hospedagem inclusa',
   'Design responsivo (mobile, tablet, desktop)',
   'Botão de WhatsApp flutuante',
   'Formulário de contato',
   'SEO básico (título, descrição, sitemap)',
-  'Integração com Google Analytics',
   'SSL (cadeado de segurança) grátis',
+  'Suporte pra ajustes por 30 dias',
+  'Entrega em até 48h após aprovação',
+  'Arquivos do site pra você hospedar onde quiser',
 ];
 
 export default function LpPage() {
@@ -126,7 +126,7 @@ export default function LpPage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs md:text-sm text-slate-400">
             <span className="flex items-center gap-1.5">⚡ Site pronto em 48h</span>
             <span className="flex items-center gap-1.5">💰 R$ 197 (sem mensalidade)</span>
-            <span className="flex items-center gap-1.5">🌐 Domínio + hospedagem inclusos</span>
+            <span className="flex items-center gap-1.5">📦 Site completo, sem pegadinha</span>
           </div>
         </section>
 

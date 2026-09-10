@@ -13,8 +13,9 @@ const nextConfig = {
   // Renomeação do painel para /admin (antigo /(dashboard)).
   // URLs antigas redirecionam 308 (permanente) para /admin/...
   // A raiz / vai pra LP pública /lp.
-  // /admin (sem path) também cai na LP — só /admin/dashboard (e sub-rotas)
-  // é que mostra o painel pra quem tem sessão; sem sessão = 404.
+  // /admin (sem path) também cai na LP — só /admin/login (público) e
+  // /admin/dashboard+ (autenticado) é que respondem.
+  // O /admin/login está em PUBLIC_PATHS (middleware) pra não bater em 404.
   async redirects() {
     return [
       { source: '/', destination: '/lp', permanent: false },

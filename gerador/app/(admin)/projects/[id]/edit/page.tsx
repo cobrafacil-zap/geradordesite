@@ -456,7 +456,9 @@ export default function EditorPage() {
                   <button onClick={() => setPreviewKey((k) => k + 1)} className="btn-ghost text-xs flex items-center gap-1.5" title="Atualizar preview">
                     <Icon name="eye" size={12} /> Atualizar
                   </button>
-                  <a href={`/api/preview/${projectId}`} target="_blank" className="btn-ghost text-xs">Abrir em nova aba ↗</a>
+                  <a href={`/admin/preview/${projectId}`} target="_blank" rel="noopener noreferrer" className="btn-ghost text-xs inline-flex items-center gap-1.5" title="Abrir preview em tela cheia (nova aba)">
+                    <Icon name="maximize" size={12} /> Tela cheia ↗
+                  </a>
                 </div>
               </div>
               <iframe

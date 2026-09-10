@@ -16,6 +16,7 @@ const STEPS = [
   { id: 6, label: 'Imagens' },
   { id: 7, label: 'Referências' },
   { id: 8, label: 'Gerar' },
+  { id: 9, label: 'Briefing' },
 ];
 
 const SEGMENTS = [
@@ -71,6 +72,9 @@ export default function NewProjectPage() {
   const [draft, setDraft] = useState<DraftProject>(DEFAULT_DRAFT);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Estado do passo 9 (gerar link de checkout)
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [checkoutLink, setCheckoutLink] = useState<{ token: string; url: string } | null>(null);
 
   function update<K extends keyof DraftProject>(key: K, value: DraftProject[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -101,6 +105,23 @@ export default function NewProjectPage() {
     } catch (e: any) {
       setError(e?.message || 'Erro');
       setGenerating(false);
+    }
+  }
+
+  async function generateCheckoutLink() {
+    setError(null);
+    setGeneratingLink(true);
+    try {
+      const res = await fetch('/api/briefings', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao gerar link');
+      setCheckoutLink({ token: data.token, url: data.checkoutUrl });
+      toast.success('Link gerado! Copie e mande no WhatsApp pro cliente.');
+    } catch (e: any) {
+      setError(e?.message || 'Erro ao gerar link');
+      toast.error('Falha', e.message);
+    } finally {
+      setGeneratingLink(false);
     }
   }
 
@@ -219,6 +240,13 @@ export default function NewProjectPage() {
             {step === 8 && (
               <Step8 draft={draft} />
             )}
+            {step === 9 && (
+              <Step9
+                checkoutLink={checkoutLink}
+                generating={generatingLink}
+                onGenerate={generateCheckoutLink}
+              />
+            )}
 
             {error && (
               <div className="mt-6 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg p-3">
@@ -247,14 +275,26 @@ export default function NewProjectPage() {
             Continuar <Icon name="arrow-right" size={14} />
           </Button>
         ) : (
-          <Button
-            onClick={generate}
-            loading={generating}
-            size="lg"
-            icon={<Icon name="sparkles" size={16} />}
-          >
-            {generating ? 'Criando projeto...' : 'Gerar projeto'}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={generateCheckoutLink}
+              loading={generatingLink}
+              variant="secondary"
+              icon={<Icon name="arrow-right" size={14} />}
+              title="Manda o briefing pro cliente responder + pagar antes de você gerar"
+            >
+              {generatingLink ? 'Gerando…' : '💬 Gerar link de checkout'}
+            </Button>
+            <Button
+              onClick={generate}
+              loading={generating}
+              size="lg"
+              icon={<Icon name="sparkles" size={16} />}
+              title="Cria o projeto direto e abre o editor"
+            >
+              {generating ? 'Criando projeto...' : '✨ Gerar projeto agora'}
+            </Button>
+          </div>
         )}
       </div>
     </div>
@@ -506,6 +546,98 @@ function Header({ title, subtitle }: { title: string; subtitle?: string }) {
     <div className="mb-5">
       <h2 className="text-xl font-bold text-fg">{title}</h2>
       {subtitle && <p className="text-sm text-fg-muted mt-1">{subtitle}</p>}
+    </div>
+  );
+}
+
+/* ── STEP 9: Briefing — gerar link de checkout ──────────────── */
+function Step9({
+  checkoutLink, generating, onGenerate,
+}: {
+  checkoutLink: { token: string; url: string } | null;
+  generating: boolean;
+  onGenerate: () => void | Promise<void>;
+}) {
+  const [copied, setCopied] = useState(false);
+  const waMessage = encodeURIComponent(
+    `Oi! Aqui é o link pra você preencher o briefing do seu site e fazer o pagamento de R$ 197: ${checkoutLink?.url || ''}`
+  );
+  const waHref = `https://wa.me/5543996820296?text=${waMessage}`;
+
+  async function copy() {
+    if (!checkoutLink) return;
+    try {
+      await navigator.clipboard.writeText(checkoutLink.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {/* noop */}
+  }
+
+  return (
+    <div className="space-y-4">
+      <Header
+        title="Briefing por link"
+        subtitle="Manda um link de briefing+pagamento pro cliente. Ele responde 8 perguntas, paga R$ 197 e o projeto cai aqui no painel."
+      />
+
+      {!checkoutLink ? (
+        <div className="rounded-lg border border-border p-6 bg-bg-elev">
+          <p className="text-sm text-fg-muted mb-4">
+            Quando você clicar em <strong className="text-fg">"Gerar link de checkout"</strong> lá embaixo,
+            um link único será criado. O cliente acessa, preenche o briefing e paga
+            via Mercado Pago. Após o pagamento, o projeto aparece aqui no painel.
+          </p>
+          <ul className="text-sm text-fg-muted space-y-1.5">
+            <li>✓ Você não precisa digitar nada do briefing</li>
+            <li>✓ O cliente responde 8 perguntas + manda logo e fotos</li>
+            <li>✓ R$ 197 cai direto na sua conta do Mercado Pago</li>
+            <li>✓ Projeto entra em status "draft" pronto pra você gerar</li>
+          </ul>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="rounded-lg border-2 border-emerald-500/30 bg-emerald-500/5 p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">🎉</span>
+              <h3 className="font-semibold text-fg">Link gerado!</h3>
+            </div>
+            <p className="text-sm text-fg-muted mb-3">
+              Manda esse link pro cliente no WhatsApp. Ele responde o briefing e paga R$ 197.
+            </p>
+            <div className="flex items-stretch gap-2">
+              <input
+                readOnly
+                value={checkoutLink.url}
+                className="flex-1 bg-bg border border-border rounded-lg px-3 py-2 text-xs font-mono text-fg"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <button
+                type="button"
+                onClick={copy}
+                className="px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition-colors whitespace-nowrap"
+              >
+                {copied ? '✓ Copiado' : 'Copiar'}
+              </button>
+            </div>
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#25D366] hover:bg-[#1DA851] text-white text-sm font-semibold transition-colors w-full sm:w-auto justify-center"
+            >
+              💬 Mandar no WhatsApp
+            </a>
+          </div>
+
+          <div className="rounded-lg border border-border bg-bg-elev p-4 text-xs text-fg-muted space-y-1.5">
+            <p><strong className="text-fg">Como funciona:</strong></p>
+            <p>1. Cliente clica no link e responde 8 perguntas</p>
+            <p>2. Cliente faz upload da logo e fotos</p>
+            <p>3. Cliente clica em "Pagar" e é redirecionado pro Mercado Pago</p>
+            <p>4. Após o pagamento, o projeto aparece em <a href="/admin/briefings" className="text-violet-400 hover:underline">/admin/briefings</a></p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -16,15 +16,22 @@ import { NextResponse, type NextRequest } from 'next/server';
  */
 
 const PUBLIC_PATHS = [
-  '/login',
+  '/admin/login', // tela de login do admin (precisa ser pública pra entrar sem sessão)
+  '/admin/login/', // variações
   '/setup',
   '/lp', // landing page pública de pré-qualificação (Social Marketing BR)
+  '/lp/', // e sub-rotas (ex: /lp/preview/[slug])
+  '/checkout', // checkout público do briefing (ex: /checkout/abc123)
+  '/checkout/', // variações
   '/auth/callback',
   '/auth/confirm',
   '/api/auth', // login/signup/logout/callback — nunca redirecionar (são endpoints que o cliente chama)
   '/api/health',
   '/api/preview', // preview iframe (autenticação tratada no route handler)
   '/api/template-preview', // preview de modelos no /models (público, sem auth)
+  '/api/briefings', // leitura/escrita de briefing via token (auth via token, não sessão)
+  '/api/briefings/',
+  '/api/webhooks', // webhooks do Mercado Pago (validam por x-signature)
 ];
 
 function isPublic(pathname: string): boolean {
@@ -64,10 +71,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/lp', request.url));
     }
 
-    // /login é página pública. Se o usuário está logado e cai em /login,
-    // manda pro admin. (Sem redirect pra /login a partir de rotas
+    // /admin/login é página pública. Se o usuário está logado e cai em /admin/login,
+    // manda pro dashboard. (Sem redirect pra /admin/login a partir de rotas
     // protegidas — /admin/* responde 404 via notFound() no layout.)
-    if (session && pathname === '/login') {
+    if (session && (pathname === '/admin/login' || pathname === '/admin/login/')) {
       return NextResponse.redirect(new URL('/admin/dashboard', request.url));
     }
   } catch (err) {
