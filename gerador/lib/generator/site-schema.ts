@@ -127,6 +127,304 @@ export const AssetSchema = z.object({
 export type Asset = z.infer<typeof AssetSchema>;
 
 // ─────────────────────────────────────────────────────────────────
+// Navigation + Pages customizadas por slug
+//
+// Cada segmento tem seu próprio menu e estrutura de páginas internas
+// (não apenas a home) — assim o site não parece todo igual com
+// "Início / Sobre / Serviços / Contato" repetido em 35 vezes.
+// ─────────────────────────────────────────────────────────────────
+
+type NavLink = { label: string; href: string };
+type AnySection = Record<string, any>;
+
+/** Gera a barra de navegação principal de acordo com o segmento. */
+export function pickNavigation(slug: string): NavLink[] {
+  const map: Record<string, NavLink[]> = {
+    restaurante: [
+      { label: 'Início', href: '/' },
+      { label: 'Cardápio', href: '#cardapio' },
+      { label: 'Reservas', href: '#reservas' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    pizzaria: [
+      { label: 'Início', href: '/' },
+      { label: 'Cardápio', href: '#cardapio' },
+      { label: 'Reservas', href: '#reservas' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    padaria: [
+      { label: 'Início', href: '/' },
+      { label: 'Produtos', href: '#produtos' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    'empresa-local': [
+      { label: 'Início', href: '/' },
+      { label: 'Produtos', href: '#produtos' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    'clinica-medica': [
+      { label: 'Início', href: '/' },
+      { label: 'Especialidades', href: '#especialidades' },
+      { label: 'Convênios', href: '#convenios' },
+      { label: 'Corpo clínico', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    odontologia: [
+      { label: 'Início', href: '/' },
+      { label: 'Tratamentos', href: '#servicos' },
+      { label: 'Equipe', href: '/sobre' },
+      { label: 'Convênios', href: '#convenios' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    estetica: [
+      { label: 'Início', href: '/' },
+      { label: 'Procedimentos', href: '#servicos' },
+      { label: 'Resultados', href: '#resultados' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    'escritorio-advocacia': [
+      { label: 'Início', href: '/' },
+      { label: 'Áreas de atuação', href: '#servicos' },
+      { label: 'Como atuamos', href: '#processo' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    advogado: [
+      { label: 'Início', href: '/' },
+      { label: 'Áreas', href: '#servicos' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    contador: [
+      { label: 'Início', href: '/' },
+      { label: 'Serviços', href: '#servicos' },
+      { label: 'Como trabalho', href: '#metodo' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    corretor: [
+      { label: 'Início', href: '/' },
+      { label: 'Imóveis', href: '#imoveis' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Mapa', href: '#mapa' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    consultor: [
+      { label: 'Início', href: '/' },
+      { label: 'Como trabalho', href: '#metodo' },
+      { label: 'Onde atuo', href: '#servicos' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    personal: [
+      { label: 'Início', href: '/' },
+      { label: 'Modalidades', href: '#servicos' },
+      { label: 'Horários', href: '#horarios' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    academia: [
+      { label: 'Início', href: '/' },
+      { label: 'Modalidades', href: '#servicos' },
+      { label: 'Horários', href: '#horarios' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    'pet-shop': [
+      { label: 'Início', href: '/' },
+      { label: 'Serviços', href: '#servicos' },
+      { label: 'Time', href: '/sobre' },
+      { label: 'Horários', href: '#horarios' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    imobiliaria: [
+      { label: 'Início', href: '/' },
+      { label: 'Imóveis', href: '#imoveis' },
+      { label: 'Como comprar', href: '#metodo' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Mapa', href: '#mapa' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    construtora: [
+      { label: 'Início', href: '/' },
+      { label: 'Empreendimentos', href: '#imoveis' },
+      { label: 'Como comprar', href: '#metodo' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    industria: [
+      { label: 'Início', href: '/' },
+      { label: 'Capacidades', href: '#servicos' },
+      { label: 'Tecnologia', href: '#tecnologia' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    loja: [
+      { label: 'Início', href: '/' },
+      { label: 'Coleção', href: '#produtos' },
+      { label: 'Marcas', href: '#marcas' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    limpeza: [
+      { label: 'Início', href: '/' },
+      { label: 'Serviços', href: '#servicos' },
+      { label: 'Como trabalhamos', href: '#metodo' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    mecanica: [
+      { label: 'Início', href: '/' },
+      { label: 'Serviços', href: '#servicos' },
+      { label: 'Marcas', href: '#marcas' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    eletricista: [
+      { label: 'Início', href: '/' },
+      { label: 'Serviços', href: '#servicos' },
+      { label: 'Por que nos chamar', href: '#diferenciais' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    encanador: [
+      { label: 'Início', href: '/' },
+      { label: 'Serviços', href: '#servicos' },
+      { label: 'Como atendemos', href: '#metodo' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    'assistencia-tecnica': [
+      { label: 'Início', href: '/' },
+      { label: 'Reparos', href: '#servicos' },
+      { label: 'Marcas', href: '#marcas' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    fotografo: [
+      { label: 'Início', href: '/' },
+      { label: 'Portfólio', href: '#galeria' },
+      { label: 'Coberturas', href: '#servicos' },
+      { label: 'Equipamentos', href: '#tecnologia' },
+      { label: 'Sobre', href: '/sobre' },
+    ],
+    'empresa-corporativa': [
+      { label: 'Início', href: '/' },
+      { label: 'A empresa', href: '/sobre' },
+      { label: 'Soluções', href: '#servicos' },
+      { label: 'Cases', href: '#cases' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    'empresa-moderna': [
+      { label: 'Início', href: '/' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Soluções', href: '#servicos' },
+      { label: 'Cases', href: '#cases' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    'empresa-premium': [
+      { label: 'Início', href: '/' },
+      { label: 'Tradição', href: '/sobre' },
+      { label: 'Serviços', href: '#servicos' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    startup: [
+      { label: 'Início', href: '/' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Soluções', href: '#servicos' },
+      { label: 'Cases', href: '#cases' },
+      { label: 'Contato', href: '#contato' },
+    ],
+    'agencia-marketing': [
+      { label: 'Início', href: '/' },
+      { label: 'Cases', href: '#cases' },
+      { label: 'Serviços', href: '#servicos' },
+      { label: 'Sobre', href: '/sobre' },
+      { label: 'Contato', href: '#contato' },
+    ],
+  };
+  if (map[slug]) return map[slug];
+  // Fallback padrão (não-LP)
+  return [
+    { label: 'Início', href: '/' },
+    { label: 'Sobre', href: '/sobre' },
+    { label: 'Serviços', href: '#servicos' },
+    { label: 'Contato', href: '#contato' },
+  ];
+}
+
+/** Gera as páginas internas (Sobre, Serviços, Contato) com conteúdo coerente. */
+export function buildPagesForSlug(slug: string, siteName: string, pack: any, homeSections: AnySection[]): AnySection[] {
+  const sobreTitle = pickSobreTitle(slug);
+  const servicoTitle = pickServicoTitle(slug);
+  return [
+    {
+      slug: '/', name: 'Início', title: siteName,
+      description: pack.tagline,
+      sections: homeSections,
+    },
+    {
+      slug: '/sobre', name: sobreTitle, title: sobreTitle, description: sobreTitle + ' — ' + siteName,
+      sections: [
+        { component: 'HeroSimple', variant: 'simple', content: { title: sobreTitle, subtitle: pack.tagline } },
+        { component: 'About', variant: 'simple', content: { title: 'Quem somos', text: pack.aboutText } },
+        ...(pack.team && pack.team.length
+          ? [{ component: 'Team', variant: 'default', content: { title: 'Nosso time', items: pack.team } }]
+          : []),
+        { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
+      ],
+    },
+    {
+      slug: '#servicos', name: servicoTitle, title: servicoTitle, description: servicoTitle + ' — ' + siteName,
+      sections: [
+        { component: 'HeroSimple', variant: 'simple', content: { title: servicoTitle, subtitle: 'Conheça tudo o que podemos fazer por você' } },
+        { component: 'Services', variant: 'grid', content: { title: servicoTitle, items: pack.services } },
+        ...(pack.differentials && pack.differentials.length
+          ? [{ component: 'Differentials', variant: 'default', content: { title: 'Por que nos escolher', items: pack.differentials } }]
+          : []),
+        { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
+      ],
+    },
+    {
+      slug: '#contato', name: 'Contato', title: 'Contato', description: 'Fale com ' + siteName,
+      sections: [
+        { component: 'HeroSimple', variant: 'simple', content: { title: 'Contato', subtitle: 'Estamos prontos para te atender' } },
+        { component: 'Contact', variant: 'simple', content: { title: 'Fale conosco', whatsapp: pack.whatsapp, email: pack.email, address: pack.address } },
+        { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
+      ],
+    },
+  ];
+}
+
+function pickSobreTitle(slug: string): string {
+  if (slug === 'restaurante' || slug === 'pizzaria') return 'A casa';
+  if (slug === 'clinica-medica' || slug === 'odontologia' || slug === 'estetica') return 'A clínica';
+  if (slug === 'academia') return 'A academia';
+  if (slug === 'pet-shop') return 'Quem somos';
+  if (slug === 'fotografo') return 'Sobre mim';
+  if (slug === 'escritorio-advocacia' || slug === 'advogado') return 'O escritório';
+  if (slug === 'imobiliaria' || slug === 'corretor' || slug === 'construtora') return 'A empresa';
+  if (slug === 'padaria') return 'A padaria';
+  return 'Sobre nós';
+}
+
+function pickServicoTitle(slug: string): string {
+  if (slug === 'restaurante' || slug === 'pizzaria' || slug === 'padaria') return 'Cardápio';
+  if (slug === 'clinica-medica') return 'Especialidades';
+  if (slug === 'odontologia') return 'Tratamentos';
+  if (slug === 'estetica') return 'Procedimentos';
+  if (slug === 'academia' || slug === 'personal') return 'Modalidades';
+  if (slug === 'escritorio-advocacia' || slug === 'advogado') return 'Áreas de atuação';
+  if (slug === 'imobiliaria' || slug === 'corretor' || slug === 'construtora') return 'Imóveis';
+  if (slug === 'loja' || slug === 'empresa-local') return 'Produtos';
+  if (slug === 'fotografo') return 'Coberturas';
+  return 'Serviços';
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Helper: parse seguro com fallback
 // ─────────────────────────────────────────────────────────────────
 export type ParseResult<T> =
@@ -231,57 +529,16 @@ export function siteSchemaForTemplate(templateSlug: string, tradeName: string): 
           { label: 'Início', href: '/' },
           { label: 'Garantir vaga', href: '#captura' },
         ]
-      : [
-          { label: 'Início', href: '/' },
-          { label: 'Sobre', href: '/sobre' },
-          { label: 'Serviços', href: '/servicos' },
-          { label: 'Contato', href: '#contato' },
-        ],
-    pages: isLanding
+      : pickNavigation(templateSlug),
+    pages: (isLanding
       ? [
           {
             slug: '/', name: 'Início', title: siteName,
             description: pack.tagline,
-            sections: homeSections,
+            sections: homeSections as any,
           },
         ]
-      : [
-          {
-            slug: '/', name: 'Início', title: siteName,
-            description: pack.tagline,
-            sections: homeSections,
-          },
-          {
-            slug: '/sobre', name: 'Sobre', title: 'Sobre', description: 'Sobre a ' + siteName,
-            sections: [
-              { component: 'HeroSimple', variant: 'simple', content: { title: 'Sobre nós', subtitle: pack.tagline } },
-              { component: 'About', variant: 'simple', content: { title: 'Nossa história', text: pack.aboutText } },
-              ...(pack.team && pack.team.length
-                ? [{ component: 'Team', variant: 'default', content: { title: 'Nosso time', items: pack.team } }]
-                : []),
-              { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
-            ],
-          },
-          {
-            slug: '/servicos', name: 'Serviços', title: 'Serviços', description: 'Nossos serviços',
-            sections: [
-              { component: 'HeroSimple', variant: 'simple', content: { title: 'Serviços', subtitle: 'Conheça tudo o que podemos fazer por você' } },
-              { component: 'Services', variant: 'grid', content: { title: 'Serviços', items: pack.services } },
-              ...(pack.differentials && pack.differentials.length
-                ? [{ component: 'Differentials', variant: 'default', content: { title: 'Por que nos escolher', items: pack.differentials } }]
-                : []),
-              { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
-            ],
-          },
-          {
-            slug: '#contato', name: 'Contato', title: 'Contato', description: 'Fale com ' + siteName,
-            sections: [
-              { component: 'HeroSimple', variant: 'simple', content: { title: 'Contato', subtitle: 'Estamos prontos para te atender' } },
-              { component: 'Contact', variant: 'simple', content: { title: 'Fale conosco', whatsapp: pack.whatsapp, email: pack.email, address: pack.address } },
-              { component: 'Footer', variant: 'simple', content: { floatingWa: true } },
-            ],
-          },
-        ],
+      : buildPagesForSlug(templateSlug, siteName, pack, homeSections)) as any,
     seo: {
       siteUrl: 'https://' + (lower || templateSlug) + '.com.br',
       defaultDescription: pack.tagline,

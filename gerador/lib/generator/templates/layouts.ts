@@ -19,16 +19,116 @@ type AnySection = Record<string, any>;
 // Helpers de seção
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Header — variant escolhido por SLUG (não mais fixo). Cada um dos 35
+ * sites ganha um visual de navegação próprio, pra nunca parecer que
+ * todos foram feitos com o mesmo molde.
+ *
+ *   sticky-dark       = barra fixa preta no topo (moderno, tech)
+ *   sticky-light      = barra fixa clara, logo + CTA (corporativo, clean)
+ *   centered          = logo no centro, links embaixo (boutique, premium)
+ *   split             = logo esquerda + CTA direita (serviços, imobiliária)
+ *   transparent-dark  = transparente sobre hero escuro (imobiliária, eventos)
+ *   minimal-dark      = só logo + 1 botão (LP)
+ *   ecommerce         = logo + busca + carrinho (loja)
+ *   simple            = texto plano, sem decoração (escritórios sérios)
+ */
+function pickHeaderVariant(slug: string): string {
+  const map: Record<string, string> = {
+    'empresa-corporativa': 'sticky-light',
+    'empresa-moderna': 'sticky-dark',
+    'empresa-premium': 'centered',
+    industria: 'sticky-light',
+    construtora: 'transparent-dark',
+    'empresa-local': 'split',
+    startup: 'sticky-dark',
+    'escritorio-advocacia': 'simple',
+    'clinica-medica': 'sticky-light',
+    odontologia: 'sticky-light',
+    estetica: 'centered',
+    eletricista: 'sticky-dark',
+    encanador: 'sticky-dark',
+    mecanica: 'split',
+    'assistencia-tecnica': 'sticky-dark',
+    'agencia-marketing': 'sticky-dark',
+    limpeza: 'split',
+    imobiliaria: 'split',
+    loja: 'ecommerce',
+    restaurante: 'centered',
+    pizzaria: 'transparent-dark',
+    padaria: 'split',
+    academia: 'sticky-dark',
+    'pet-shop': 'centered',
+    fotografo: 'minimal-dark',
+    advogado: 'simple',
+    contador: 'simple',
+    corretor: 'split',
+    personal: 'sticky-dark',
+    consultor: 'sticky-light',
+    'lp-lead-magnet': 'minimal-dark',
+    'lp-produto-unico': 'minimal-dark',
+    'lp-waitlist': 'minimal-dark',
+    'lp-agendamento': 'minimal-dark',
+    'lp-evento': 'transparent-dark',
+  };
+  return map[slug] || 'sticky-dark';
+}
+
 const header = (pack: ContentPack): AnySection => ({
   component: 'Header',
-  variant: 'sticky-dark',
+  variant: pickHeaderVariant(pack.slug),
   content: { whatsapp: pack.whatsapp },
 });
 
-const footer = (): AnySection => ({
+/**
+ * Footer — variants disponíveis: simple, dark, minimal, magazine.
+ * Cada slug ganha o seu pra não ficar tudo com mesma cara.
+ */
+function pickFooterVariant(slug: string): string {
+  const map: Record<string, string> = {
+    'empresa-corporativa': 'dark',
+    'empresa-premium': 'dark',
+    'empresa-moderna': 'simple',
+    industria: 'dark',
+    construtora: 'dark',
+    'empresa-local': 'simple',
+    startup: 'dark',
+    'escritorio-advocacia': 'simple',
+    'clinica-medica': 'simple',
+    odontologia: 'simple',
+    estetica: 'minimal',
+    eletricista: 'simple',
+    encanador: 'simple',
+    mecanica: 'simple',
+    'assistencia-tecnica': 'simple',
+    'agencia-marketing': 'dark',
+    limpeza: 'simple',
+    imobiliaria: 'dark',
+    loja: 'magazine',
+    restaurante: 'dark',
+    pizzaria: 'dark',
+    padaria: 'simple',
+    academia: 'dark',
+    'pet-shop': 'minimal',
+    fotografo: 'dark',
+    advogado: 'simple',
+    contador: 'simple',
+    corretor: 'simple',
+    personal: 'dark',
+    consultor: 'simple',
+    'lp-lead-magnet': 'minimal',
+    'lp-produto-unico': 'minimal',
+    'lp-waitlist': 'minimal',
+    'lp-agendamento': 'minimal',
+    'lp-evento': 'dark',
+  };
+  return map[slug] || 'simple';
+}
+
+const footer = (pack: ContentPack): AnySection => ({
   component: 'Footer',
-  variant: 'simple',
-  content: { floatingWa: true },
+  variant: pickFooterVariant(pack.slug),
+  content: { floatingWa: true, whatsapp: pack.whatsapp },
 });
 
 const heroSplit = (pack: ContentPack): AnySection => ({
@@ -130,25 +230,77 @@ const heroStickyForm = (pack: ContentPack): AnySection => ({
   },
 });
 
-const about = (pack: ContentPack, title = 'Sobre nós'): AnySection => ({
-  component: 'About', variant: 'simple',
-  content: { title, text: pack.aboutText },
-});
+const about = (pack: ContentPack, title = 'Sobre nós'): AnySection => {
+  const v = variantsFor(pack);
+  return { component: 'About', variant: v.about, content: { title, text: pack.aboutText } };
+};
 
-const services = (pack: ContentPack, title = 'Serviços'): AnySection => ({
-  component: 'Services', variant: 'grid',
-  content: { title, items: pack.services },
-});
+/**
+ * Cada pack tem um "DNA visual" único — um variant pra cada tipo de seção,
+ * atribuído deterministicamente pelo slug. Assim, mesmo que 2 slugs usem
+ * o mesmo `kind`, as seções ficam com cara diferente.
+ *
+ * Services:        grid | list | cards | magazine | alternating | bento | columns | inline
+ * Differentials:   default | highlight | bento | magazine | sidebyside | inline
+ * About:           side | centered | magazine | split-wide | image-full | numbered
+ * Stats:           default | bar | hero | inline | cards | split
+ */
+const SLUG_VARIANTS: Record<string, { services: string; diff: string; about: string; stats: string }> = {
+  'empresa-corporativa': { services: 'grid', diff: 'default', about: 'side', stats: 'split' },
+  'empresa-moderna': { services: 'bento', diff: 'bento', about: 'split-wide', stats: 'hero' },
+  'empresa-premium': { services: 'magazine', diff: 'sidebyside', about: 'magazine', stats: 'inline' },
+  industria: { services: 'cards', diff: 'highlight', about: 'numbered', stats: 'bar' },
+  construtora: { services: 'magazine', diff: 'sidebyside', about: 'image-full', stats: 'default' },
+  'empresa-local': { services: 'list', diff: 'default', about: 'side', stats: 'cards' },
+  startup: { services: 'bento', diff: 'bento', about: 'centered', stats: 'hero' },
+  'escritorio-advocacia': { services: 'magazine', diff: 'sidebyside', about: 'split-wide', stats: 'default' },
+  'clinica-medica': { services: 'grid', diff: 'default', about: 'centered', stats: 'split' },
+  odontologia: { services: 'list', diff: 'default', about: 'side', stats: 'bar' },
+  estetica: { services: 'alternating', diff: 'highlight', about: 'magazine', stats: 'inline' },
+  eletricista: { services: 'list', diff: 'inline', about: 'centered', stats: 'bar' },
+  encanador: { services: 'list', diff: 'default', about: 'side', stats: 'cards' },
+  mecanica: { services: 'list', diff: 'default', about: 'side', stats: 'bar' },
+  'assistencia-tecnica': { services: 'list', diff: 'inline', about: 'numbered', stats: 'cards' },
+  'agencia-marketing': { services: 'bento', diff: 'highlight', about: 'split-wide', stats: 'hero' },
+  limpeza: { services: 'grid', diff: 'default', about: 'side', stats: 'cards' },
+  imobiliaria: { services: 'magazine', diff: 'sidebyside', about: 'image-full', stats: 'split' },
+  loja: { services: 'cards', diff: 'highlight', about: 'magazine', stats: 'bar' },
+  restaurante: { services: 'list', diff: 'default', about: 'image-full', stats: 'inline' },
+  pizzaria: { services: 'list', diff: 'default', about: 'image-full', stats: 'inline' },
+  padaria: { services: 'cards', diff: 'highlight', about: 'numbered', stats: 'bar' },
+  academia: { services: 'bento', diff: 'bento', about: 'split-wide', stats: 'hero' },
+  'pet-shop': { services: 'grid', diff: 'default', about: 'centered', stats: 'cards' },
+  fotografo: { services: 'magazine', diff: 'magazine', about: 'image-full', stats: 'inline' },
+  advogado: { services: 'magazine', diff: 'sidebyside', about: 'split-wide', stats: 'split' },
+  contador: { services: 'list', diff: 'default', about: 'centered', stats: 'bar' },
+  corretor: { services: 'list', diff: 'default', about: 'side', stats: 'cards' },
+  personal: { services: 'grid', diff: 'default', about: 'centered', stats: 'hero' },
+  consultor: { services: 'list', diff: 'inline', about: 'numbered', stats: 'split' },
+  'lp-lead-magnet': { services: 'list', diff: 'inline', about: 'centered', stats: 'inline' },
+  'lp-produto-unico': { services: 'list', diff: 'inline', about: 'centered', stats: 'inline' },
+  'lp-waitlist': { services: 'list', diff: 'inline', about: 'centered', stats: 'inline' },
+  'lp-agendamento': { services: 'list', diff: 'inline', about: 'centered', stats: 'inline' },
+  'lp-evento': { services: 'list', diff: 'inline', about: 'centered', stats: 'inline' },
+};
 
-const differentials = (pack: ContentPack, title = 'Por que nos escolher'): AnySection => ({
-  component: 'Differentials', variant: 'default',
-  content: { title, items: pack.differentials },
-});
+function variantsFor(pack: ContentPack) {
+  return SLUG_VARIANTS[pack.slug] || { services: 'grid', diff: 'default', about: 'side', stats: 'default' };
+}
 
-const stats = (pack: ContentPack, title = 'Nossos números'): AnySection => ({
-  component: 'Stats', variant: 'default',
-  content: { title, items: pack.stats },
-});
+const services = (pack: ContentPack, title = 'Serviços'): AnySection => {
+  const v = variantsFor(pack);
+  return { component: 'Services', variant: v.services, content: { title, items: pack.services } };
+};
+
+const differentials = (pack: ContentPack, title = 'Por que nos escolher'): AnySection => {
+  const v = variantsFor(pack);
+  return { component: 'Differentials', variant: v.diff, content: { title, items: pack.differentials } };
+};
+
+const stats = (pack: ContentPack, title = 'Nossos números'): AnySection => {
+  const v = variantsFor(pack);
+  return { component: 'Stats', variant: v.stats, content: { title, items: pack.stats } };
+};
 
 const testimonials = (pack: ContentPack, title = 'Depoimentos'): AnySection => ({
   component: 'Testimonials', variant: 'default',
@@ -397,7 +549,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack)] : []),
           ...(pack.faq ? [faq(pack)] : []),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -412,7 +564,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
           reservation(pack, 'Reserve sua mesa'),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       // v === 2: pizzaria/alta gastronomia — hero escuro premium
@@ -427,7 +579,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         ...(pack.testimonials ? [testimonials(pack)] : []),
         press(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -447,7 +599,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack)] : []),
           ...(pack.faq ? [faq(pack, 'Dúvidas frequentes')] : []),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -461,7 +613,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
           map(pack),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       // v === 2: construtora
@@ -475,7 +627,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         processAdv(pack, 'Como construir com a gente'),
         ...(pack.testimonials ? [testimonials(pack)] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -495,7 +647,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           press(pack),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -509,7 +661,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           brands(pack),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -522,7 +674,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         processAdv(pack, 'Como é um projeto conosco'),
         brands(pack),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -542,7 +694,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack)] : []),
           ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -558,7 +710,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack, 'O que dizem pacientes')] : []),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -572,7 +724,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         ...(pack.testimonials ? [testimonials(pack)] : []),
         method(pack, 'Como funciona uma consulta'),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -592,7 +744,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -607,7 +759,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           brands(pack, 'Atendemos'),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -620,7 +772,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         ...(pack.stats ? [stats(pack)] : []),
         ...(pack.faq ? [faq(pack)] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -640,7 +792,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack)] : []),
           ...(pack.faq ? [faq(pack)] : []),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -655,7 +807,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -668,7 +820,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         about(pack, 'Quem somos'),
         ...(pack.testimonials ? [testimonials(pack)] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -688,7 +840,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           differentials(pack, 'Por que nos contratar'),
           ...(pack.faq ? [faq(pack)] : []),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -704,7 +856,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack)] : []),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -716,7 +868,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         ...(pack.testimonials ? [testimonials(pack, 'Casos publicados')] : []),
         press(pack),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -736,7 +888,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack)] : []),
           ...(pack.faq ? [faq(pack)] : []),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -750,7 +902,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
           press(pack, 'Onde meu trabalho apareceu'),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -763,7 +915,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         ...(pack.stats ? [stats(pack)] : []),
         ...(pack.testimonials ? [testimonials(pack)] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -783,7 +935,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.faq ? [faq(pack)] : []),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -797,7 +949,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack, 'Tutores contam')] : []),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -809,7 +961,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         ...(pack.testimonials ? [testimonials(pack)] : []),
         differentials(pack),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -829,7 +981,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack, 'O que dizem alunos')] : []),
           ...(pack.faq ? [faq(pack)] : []),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -843,7 +995,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           differentials(pack),
           ...(pack.testimonials ? [testimonials(pack)] : []),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -856,7 +1008,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.stats ? [stats(pack)] : []),
           ...(pack.testimonials ? [testimonials(pack)] : []),
           cta(pack),
-          footer(),
+          footer(pack),
       ];
     }
 
@@ -875,7 +1027,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
           ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -889,7 +1041,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           brands(pack, 'Atendo'),
           ...(pack.testimonials ? [testimonials(pack)] : []),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -902,7 +1054,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack)] : []),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
       ];
     }
 
@@ -921,7 +1073,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack)] : []),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -935,7 +1087,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.testimonials ? [testimonials(pack)] : []),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -946,7 +1098,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         services(pack, 'Categorias'),
         ...(pack.testimonials ? [testimonials(pack)] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -964,7 +1116,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         ...(pack.testimonials ? [testimonials(pack, 'Quem já usa')] : []),
         ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ═════════════════════════════════════════════════════════
@@ -984,7 +1136,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           brands(pack, 'Quem confia'),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -996,7 +1148,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         ...(pack.stats ? [stats(pack, 'Resultados')] : []),
         brands(pack, 'Clientes'),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -1014,7 +1166,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         ...(pack.testimonials ? [testimonials(pack, 'Depoimentos')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
     }
 
@@ -1035,7 +1187,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           ...(pack.faq ? [faq(pack)] : []),
           cta(pack),
           contact(pack),
-          footer(),
+          footer(pack),
         ];
       }
       if (v === 1) {
@@ -1049,7 +1201,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
           method(pack),
           ...(pack.testimonials ? [testimonials(pack)] : []),
           cta(pack),
-          footer(),
+          footer(pack),
         ];
       }
       return [
@@ -1061,7 +1213,7 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         differentials(pack),
         ...(pack.testimonials ? [testimonials(pack)] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
   }
 }
@@ -1094,7 +1246,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'Falam de nós')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── 2) Empresa Premium ── boutique, escuro, refinado, sóbrio
@@ -1109,7 +1261,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'Depoimentos')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── 3) Empresa Moderna ── startup, split, números primeiro
@@ -1124,7 +1276,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         logos(pack, 'Confiam na gente'),
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── 4) Advocacia ── magazine, áreas primeiro, processo jurídico
@@ -1139,7 +1291,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         press(pack, 'Onde nosso trabalho apareceu'),
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── 5) Clínica Médica ── centered, especialidades, convênios, time
@@ -1156,7 +1308,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.faq ? [faq(pack, 'Dúvidas frequentes')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── 6) Restaurante ── cardápio grande, chef, reserva
@@ -1172,7 +1324,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         reservation(pack, 'Reserve sua mesa'),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── 7) Imobiliária ── imóveis em grid, busca, mapa
@@ -1189,7 +1341,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── 8) Loja ── magazine, produtos em destaque, marcas
@@ -1204,7 +1356,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── 9) Agência de Marketing ── centered, cases primeiro (diferente de startup)
@@ -1219,7 +1371,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         about(pack, 'Sobre a agência'),
         ...(pack.testimonials ? [testimonials(pack, 'Falam de nós')] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ════════════════════════════════════════════════════════════
@@ -1239,7 +1391,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         brands(pack, 'Quem confia'),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Construtora ── full-bleed, empreendimentos, processo
@@ -1255,7 +1407,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         brands(pack, 'Parceiros'),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Empresa Local / Comércio de bairro ── split, produtos, mapa
@@ -1271,7 +1423,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'Falam de nós')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Startup ── dark, pitch, tração, cases (diferente da agência)
@@ -1286,7 +1438,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         about(pack, 'Sobre a startup'),
         ...(pack.testimonials ? [testimonials(pack, 'Falam de nós')] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Agência de Marketing ── (versão única acima, esta é duplicata removida)
@@ -1305,7 +1457,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Estética ── asymmetric, procedimentos, galeria de antes/depois
@@ -1322,7 +1474,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Eletricista ── alert, serviços urgentes, áreas atendidas
@@ -1339,7 +1491,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Encanador ── split, serviços, processo de atendimento
@@ -1356,7 +1508,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         brands(pack, 'Atendemos condomínios e empresas'),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Mecânica ── full-bleed, serviços, marcas
@@ -1372,7 +1524,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Assistência Técnica ── alert, serviços, marcas
@@ -1389,7 +1541,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Limpeza ── magazine, serviços, processo
@@ -1406,7 +1558,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Pizzaria ── full-bleed, cardápio, processo
@@ -1422,7 +1574,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         reservation(pack, 'Reserve sua mesa'),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Padaria ── centered, produtos, processo artesanal
@@ -1438,7 +1590,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Academia ── dark, modalidades, schedule
@@ -1455,7 +1607,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Pet Shop ── split, serviços, time
@@ -1471,7 +1623,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'Tutores contam')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Fotógrafo ── dark, galeria, instrumentos
@@ -1487,7 +1639,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         press(pack, 'Onde meu trabalho apareceu'),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Advogado autônomo ── magazine, áreas, processo jurídico
@@ -1504,7 +1656,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.faq ? [faq(pack, 'Dúvidas frequentes')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Contador ── asymmetric, serviços, processo
@@ -1521,7 +1673,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Corretor ── split, imóveis, mapa
@@ -1538,7 +1690,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Personal Trainer ── dark, modalidades, schedule
@@ -1555,7 +1707,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'O que dizem alunos')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── Consultor ── asymmetric, sobre, marcas (diferente do advogado)
@@ -1573,7 +1725,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ════════════════════════════════════════════════════════════
@@ -1589,7 +1741,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'Quem já baixou')] : []),
         ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── LP Waitlist ── lista de espera, prova social antes de FAQ
@@ -1602,7 +1754,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'Falam do lançamento')] : []),
         ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── LP Produto Único ── landing com form, prova, FAQ
@@ -1615,7 +1767,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'Quem já comprou')] : []),
         ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
     case 'lp-agendamento':
       return [
@@ -1628,7 +1780,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
         cta(pack),
         contact(pack),
-        footer(),
+        footer(pack),
       ];
 
     // ── LP Evento ── evento, programação, depoimentos antes de FAQ
@@ -1642,7 +1794,7 @@ function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | nu
         ...(pack.testimonials ? [testimonials(pack, 'Edições anteriores')] : []),
         ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
         cta(pack),
-        footer(),
+        footer(pack),
       ];
 
     default:
