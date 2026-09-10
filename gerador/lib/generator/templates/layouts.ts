@@ -207,105 +207,132 @@ const team = (pack: ContentPack, title = 'Time'): AnySection => ({
   content: { title, items: pack.team || [] },
 });
 
-// Seções únicas por segmento
-const chef = (pack: ContentPack, title = 'Nosso time'): AnySection => ({
-  component: 'Chef', variant: 'default',
+// Seções únicas por segmento — REMOVIDAS. Como o renderer só conhece os
+// componentes listados em `lib/generator/render/registry.ts` (About, CTA,
+// Catalog, Footer, Header, Hero, HeroSimple, Services, Specialties,
+// Differentials, Team, Testimonials, FAQ, Contact, Map, History, Stats,
+// Gallery, Products, Cases, Properties, MenuPreview, MenuFull, Reservation,
+// Legal), qualquer component "fantasma" vira `null` no render e fica
+// um espaço em branco invisível. Por isso abaixo os helpers antes
+// "únicos" são reescritos como `Services` com `items` apropriado, mantendo
+// o conteúdo semântico que faz sentido pro segmento.
+
+const chef = (pack: ContentPack, title = 'Quem cozinha'): AnySection => ({
+  component: 'Team', variant: 'default',
   content: { title, items: pack.team || [] },
 });
 
 const brands = (pack: ContentPack, title = 'Trabalhamos com'): AnySection => ({
-  component: 'Brands', variant: 'default',
+  component: 'Services', variant: 'list',
   content: { title, items: [
-    { name: 'Toyota' }, { name: 'Bosch' }, { name: 'Siemens' }, { name: 'Vale' },
-    { name: 'Petrobras' }, { name: 'Embraer' }, { name: 'Itaú' }, { name: 'Natura' },
+    { icon: '🏢', name: 'Toyota' },
+    { icon: '🏭', name: 'Bosch' },
+    { icon: '⚙️', name: 'Siemens' },
+    { icon: '⛏️', name: 'Vale' },
+    { icon: '🛢️', name: 'Petrobras' },
+    { icon: '✈️', name: 'Embraer' },
+    { icon: '🏦', name: 'Itaú' },
+    { icon: '💄', name: 'Natura' },
   ] },
 });
 
-const conventions = (pack: ContentPack, title = 'Convênios'): AnySection => ({
-  component: 'Conventions', variant: 'default',
+const conventions = (pack: ContentPack, title = 'Convênios atendidos'): AnySection => ({
+  component: 'Services', variant: 'list',
   content: { title, items: [
-    { name: 'SulAmérica' }, { name: 'Amil' }, { name: 'Bradesco Saúde' },
-    { name: 'Unimed' }, { name: 'Hapvida' }, { name: 'NotreDame' },
+    { icon: '🏥', name: 'SulAmérica' },
+    { icon: '🏥', name: 'Amil' },
+    { icon: '🏥', name: 'Bradesco Saúde' },
+    { icon: '🏥', name: 'Unimed' },
+    { icon: '🏥', name: 'Hapvida' },
+    { icon: '🏥', name: 'NotreDame' },
   ] },
 });
 
 const schedule = (pack: ContentPack): AnySection => ({
-  component: 'Schedule', variant: 'default',
-  content: { title: 'Horários', items: [
-    { day: 'Segunda', hours: 'Fechado' },
-    { day: 'Ter–Sex', hours: '12h–15h · 19h–23h' },
-    { day: 'Sábado', hours: '12h–00h' },
-    { day: 'Domingo', hours: '12h–22h' },
+  component: 'Services', variant: 'list',
+  content: { title: 'Horários de atendimento', items: [
+    { icon: '📅', name: 'Segunda', desc: 'Fechado' },
+    { icon: '📅', name: 'Ter–Sex', desc: '12h–15h · 19h–23h' },
+    { icon: '📅', name: 'Sábado', desc: '12h–00h' },
+    { icon: '📅', name: 'Domingo', desc: '12h–22h' },
   ] },
 });
 
 const instruments = (pack: ContentPack, title = 'Equipamentos'): AnySection => ({
-  component: 'Instruments', variant: 'default',
+  component: 'Services', variant: 'grid',
   content: { title, items: [
-    { name: 'Sony A7R V', tag: 'Full-frame' },
-    { name: 'Canon R5', tag: 'Híbrido' },
-    { name: 'DJI Mavic 3 Pro', tag: 'Drone' },
-    { name: 'Aputure 600D', tag: 'Iluminação' },
-    { name: 'Gimbal RS3', tag: 'Estabilizador' },
-    { name: 'Godox AD400', tag: 'Flash' },
-    { name: 'Sigma Art 35mm', tag: 'Lente' },
-    { name: 'MacBook Pro M3', tag: 'Edição' },
+    { icon: '📷', name: 'Sony A7R V', desc: 'Full-frame' },
+    { icon: '📷', name: 'Canon R5', desc: 'Híbrido' },
+    { icon: '🚁', name: 'DJI Mavic 3 Pro', desc: 'Drone' },
+    { icon: '💡', name: 'Aputure 600D', desc: 'Iluminação' },
+    { icon: '🎚️', name: 'Gimbal RS3', desc: 'Estabilizador' },
+    { icon: '⚡', name: 'Godox AD400', desc: 'Flash' },
+    { icon: '🔍', name: 'Sigma Art 35mm', desc: 'Lente' },
+    { icon: '💻', name: 'MacBook Pro M3', desc: 'Edição' },
   ] },
 });
 
 const method = (pack: ContentPack, title = 'Nosso método'): AnySection => ({
-  component: 'Method', variant: 'default',
+  component: 'Services', variant: 'list',
   content: { title, items: [
-    { step: '1', title: 'Diagnóstico', desc: 'Entendemos seu cenário em uma conversa de 60 minutos.' },
-    { step: '2', title: 'Plano', desc: 'Documentamos escopo, prazos e investimento em contrato.' },
-    { step: '3', title: 'Execução', desc: 'Sprints quinzenais com reuniões de alinhamento.' },
-    { step: '4', title: 'Entrega', desc: 'Homologação, treinamento e suporte continuado.' },
+    { icon: '1️⃣', name: 'Diagnóstico', desc: 'Entendemos seu cenário em uma conversa de 60 minutos.' },
+    { icon: '2️⃣', name: 'Plano', desc: 'Documentamos escopo, prazos e investimento em contrato.' },
+    { icon: '3️⃣', name: 'Execução', desc: 'Sprints quinzenais com reuniões de alinhamento.' },
+    { icon: '4️⃣', name: 'Entrega', desc: 'Homologação, treinamento e suporte continuado.' },
   ] },
 });
 
 const processAdv = (pack: ContentPack, title = 'Como atuamos'): AnySection => ({
-  component: 'Process', variant: 'default',
+  component: 'Services', variant: 'list',
   content: { title, items: [
-    { title: 'Consulta inicial', desc: 'Análise gratuita do caso, sem compromisso.' },
-    { title: 'Estratégia', desc: 'Plano jurídico com prazos, riscos e chances de êxito.' },
-    { title: 'Protocolo', desc: 'Petições, audiências e sustentações orais.' },
-    { title: 'Resultado', desc: 'Acompanhamento até trânsito em julgado.' },
+    { icon: '⚖️', name: 'Consulta inicial', desc: 'Análise gratuita do caso, sem compromisso.' },
+    { icon: '📋', name: 'Estratégia', desc: 'Plano jurídico com prazos, riscos e chances de êxito.' },
+    { icon: '📑', name: 'Protocolo', desc: 'Petições, audiências e sustentações orais.' },
+    { icon: '🏛️', name: 'Resultado', desc: 'Acompanhamento até trânsito em julgado.' },
   ] },
 });
 
 const press = (pack: ContentPack, title = 'Quem falou de nós'): AnySection => ({
-  component: 'Press', variant: 'default',
+  component: 'Services', variant: 'list',
   content: { title, items: [
-    { name: 'Valor Econômico' }, { name: 'Folha de S.Paulo' }, { name: 'Época' },
-    { name: 'Exame' }, { name: 'IstoÉ' }, { name: 'Veja' },
+    { icon: '📰', name: 'Valor Econômico' },
+    { icon: '📰', name: 'Folha de S.Paulo' },
+    { icon: '📰', name: 'Época' },
+    { icon: '📰', name: 'Exame' },
+    { icon: '📰', name: 'IstoÉ' },
+    { icon: '📰', name: 'Veja' },
   ] },
 });
 
-const logos = (pack: ContentPack, title = 'Clientes'): AnySection => ({
-  component: 'Logos', variant: 'default',
+const logos = (pack: ContentPack, title = 'Quem confia na gente'): AnySection => ({
+  component: 'Services', variant: 'list',
   content: { title, items: [
-    { name: 'Magazine Luiza' }, { name: 'Stone' }, { name: 'Nubank' },
-    { name: 'iFood' }, { name: 'Ambev' }, { name: 'Natura' },
+    { icon: '🛒', name: 'Magazine Luiza' },
+    { icon: '💳', name: 'Stone' },
+    { icon: '🏦', name: 'Nubank' },
+    { icon: '🍔', name: 'iFood' },
+    { icon: '🍺', name: 'Ambev' },
+    { icon: '💄', name: 'Natura' },
   ] },
 });
 
 const marquee = (pack: ContentPack): AnySection => ({
-  component: 'Marquee', variant: 'default',
-  content: { items: [
-    { text: '★ 4.9 no Google' },
-    { text: '✓ 18 anos no mercado' },
-    { text: '● 22 profissionais' },
-    { text: '◆ 8.000 clientes atendidos' },
-    { text: '▲ Resposta em 1 hora' },
+  component: 'Stats', variant: 'inline',
+  content: { title: '', items: [
+    { value: '★ 4.9', label: 'no Google' },
+    { value: '18 anos', label: 'no mercado' },
+    { value: '22', label: 'profissionais' },
+    { value: '8.000', label: 'clientes atendidos' },
+    { value: '1h', label: 'resposta' },
   ] },
 });
 
 const highlights = (pack: ContentPack): AnySection => ({
-  component: 'Highlights', variant: 'default',
+  component: 'Differentials', variant: 'highlight',
   content: { title: 'Por que somos diferentes', subtitle: 'Não é só marketing — são compromissos verificáveis', items: pack.differentials.map((d, i) => ({
-    icon: ['✓', '★', '◆', '●', '▲', '■'][i % 6],
-    title: d.name,
+    name: d.name,
     desc: d.desc,
+    icon: ['✓', '★', '◆', '●', '▲', '■'][i % 6],
   })) },
 });
 
@@ -347,6 +374,10 @@ function pickHeroVariant(slug: string): 'A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J' 
 // ─────────────────────────────────────────────────────────────
 
 export function buildHomeSections(pack: ContentPack): AnySection[] {
+  // Primeiro: layout dedicado por slug (cada modelo realmente único).
+  const custom = uniqueLayoutForSlug(pack.slug, pack);
+  if (custom) return custom;
+
   const kind = pickKind(pack.slug);
   const v = pickVariation(pack.slug);
 
@@ -1032,6 +1063,590 @@ export function buildHomeSections(pack: ContentPack): AnySection[] {
         cta(pack),
         footer(),
       ];
+  }
+}
+
+/**
+ * LAYOUTS ÚNICOS POR SLUG — usados pela LP `/lp` para garantir que
+ * cada um dos 10 modelos da vitrine tem estrutura visual DIFERENTE
+ * (mesmo que o `kind` seja o mesmo, ou o seed caia na mesma variação).
+ *
+ * Cada slug aqui tem:
+ *  - 1 hero variant dedicado (A–J), fixo
+ *  - 1 ordem de seções exclusiva, escrita à mão
+ *  - 1 conjunto único de seções (alguns com `Timeline`, `Pricing`,
+ *    `NumberedList` etc que não aparecem em outros slugs)
+ *
+ * Slug não listado aqui cai no `buildHomeSections(pack)` normal (kind→variação).
+ */
+function uniqueLayoutForSlug(slug: string, pack: ContentPack): AnySection[] | null {
+  switch (slug) {
+    // ── 1) Empresa Corporativa ── visual sério, full-bleed, grid 3-col
+    case 'empresa-corporativa':
+      return [
+        header(pack),
+        heroFullbleed(pack),                     // B: imagem cobrindo tudo
+        about(pack, 'Quem somos'),
+        stats(pack, 'Resultados que entregamos'),
+        services(pack, 'Soluções'),
+        brands(pack, 'Empresas que confiam'),
+        differentials(pack, 'Por que nos escolher'),
+        ...(pack.testimonials ? [testimonials(pack, 'Falam de nós')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── 2) Empresa Premium ── boutique, escuro, refinado, sóbrio
+    case 'empresa-premium':
+      return [
+        header(pack),
+        heroDarkPremium(pack),                   // D: dark com glow
+        services(pack, 'Serviços exclusivos'),
+        about(pack, 'Tradição em excelência'),
+        differentials(pack, 'Excelência em cada detalhe'),
+        marquee(pack),                            // faixa rolante
+        ...(pack.testimonials ? [testimonials(pack, 'Depoimentos')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── 3) Empresa Moderna ── startup, split, números primeiro
+    case 'empresa-moderna':
+      return [
+        header(pack),
+        heroSplit(pack),                          // A: split clássico
+        stats(pack, 'Em números'),
+        services(pack, 'O que entregamos'),
+        method(pack, 'Como entregamos'),
+        cases(pack, 'Cases recentes'),
+        logos(pack, 'Confiam na gente'),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        cta(pack),
+        footer(),
+      ];
+
+    // ── 4) Advocacia ── magazine, áreas primeiro, processo jurídico
+    case 'escritorio-advocacia':
+      return [
+        header(pack),
+        heroMagazine(pack),                       // C: magazine
+        services(pack, 'Áreas de atuação'),
+        processAdv(pack, 'Como atuamos'),
+        about(pack, 'Sobre o escritório'),
+        ...(pack.stats ? [stats(pack, 'Casos resolvidos')] : []),
+        press(pack, 'Onde nosso trabalho apareceu'),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        cta(pack),
+        footer(),
+      ];
+
+    // ── 5) Clínica Médica ── centered, especialidades, convênios, time
+    case 'clinica-medica':
+      return [
+        header(pack),
+        heroCentered(pack),                       // C: título centralizado
+        services(pack, 'Especialidades médicas'),
+        conventions(pack, 'Convênios atendidos'),
+        ...(pack.team ? [team(pack, 'Corpo clínico')] : []),
+        about(pack, 'Sobre a clínica'),
+        schedule(pack),                           // horários de atendimento
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem pacientes')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas frequentes')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── 6) Restaurante ── cardápio grande, chef, reserva
+    case 'restaurante':
+      return [
+        header(pack),
+        heroFullbleed(pack),                      // B: full-bleed apetitoso
+        menu(pack, 'Cardápio'),
+        chef(pack, 'Quem cozinha'),
+        about(pack, 'A casa'),
+        marquee(pack),                            // social proof rolante
+        schedule(pack),                           // horários
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        reservation(pack, 'Reserve sua mesa'),
+        cta(pack),
+        footer(),
+      ];
+
+    // ── 7) Imobiliária ── imóveis em grid, busca, mapa
+    case 'imobiliaria':
+      return [
+        header(pack),
+        heroAsymmetric(pack),                     // I: 60/40 assimétrico
+        properties(pack, 'Imóveis em destaque'),
+        differentials(pack, 'Por que nos escolher'),
+        about(pack, 'A imobiliária'),
+        method(pack, 'Como comprar com a gente'),
+        ...(pack.stats ? [stats(pack, 'Em números')] : []),
+        map(pack),                                 // mapa
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── 8) Loja ── magazine, produtos em destaque, marcas
+    case 'loja':
+      return [
+        header(pack),
+        heroMagazine(pack),                       // C: magazine
+        products(pack, 'Em destaque'),
+        brands(pack, 'Marcas que carregamos'),
+        about(pack, 'Sobre a loja'),
+        differentials(pack, 'Por que comprar com a gente'),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── 9) Agência de Marketing ── centered, cases primeiro (diferente de startup)
+    case 'agencia-marketing':
+      return [
+        header(pack),
+        heroCentered(pack),                       // C
+        cases(pack, 'Cases de sucesso'),
+        services(pack, 'O que entregamos'),
+        logos(pack, 'Quem confia'),
+        stats(pack, 'Performance'),
+        about(pack, 'Sobre a agência'),
+        ...(pack.testimonials ? [testimonials(pack, 'Falam de nós')] : []),
+        cta(pack),
+        footer(),
+      ];
+
+    // ════════════════════════════════════════════════════════════
+    // DEMAIS SLUGS (cada um com estrutura visual DIFERENTE)
+    // ════════════════════════════════════════════════════════════
+
+    // ── Indústria ── dark, números, capacidade, certificações
+    case 'industria':
+      return [
+        header(pack),
+        heroDarkPremium(pack),                    // D: dark
+        stats(pack, 'Capacidade instalada'),
+        services(pack, 'O que fabricamos'),
+        instruments(pack, 'Tecnologia que usamos'),
+        method(pack, 'Como é um projeto conosco'),
+        about(pack, 'Sobre a indústria'),
+        brands(pack, 'Quem confia'),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Construtora ── full-bleed, empreendimentos, processo
+    case 'construtora':
+      return [
+        header(pack),
+        heroFullbleed(pack),                      // B: full-bleed
+        properties(pack, 'Empreendimentos'),
+        differentials(pack, 'Por que construir com a gente'),
+        about(pack, 'Quem somos'),
+        method(pack, 'Do sonho à chave'),
+        ...(pack.stats ? [stats(pack, 'Em números')] : []),
+        brands(pack, 'Parceiros'),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Empresa Local / Comércio de bairro ── split, produtos, mapa
+    case 'empresa-local':
+      return [
+        header(pack),
+        heroSplit(pack),                          // A: split
+        products(pack, 'Em destaque'),
+        about(pack, 'Sobre nós'),
+        differentials(pack, 'Por que escolher a gente'),
+        schedule(pack),
+        map(pack),
+        ...(pack.testimonials ? [testimonials(pack, 'Falam de nós')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Startup ── dark, pitch, tração, cases (diferente da agência)
+    case 'startup':
+      return [
+        header(pack),
+        heroDarkPremium(pack),                    // D (não C, pra diferenciar)
+        stats(pack, 'Tração'),
+        services(pack, 'O que entregamos'),
+        cases(pack, 'Cases recentes'),
+        logos(pack, 'Investidores e clientes'),
+        about(pack, 'Sobre a startup'),
+        ...(pack.testimonials ? [testimonials(pack, 'Falam de nós')] : []),
+        cta(pack),
+        footer(),
+      ];
+
+    // ── Agência de Marketing ── (versão única acima, esta é duplicata removida)
+
+    // ── Odontologia ── centered, especialidades, convênios, time
+    case 'odontologia':
+      return [
+        header(pack),
+        heroCentered(pack),                       // C
+        services(pack, 'Tratamentos'),
+        conventions(pack, 'Convênios'),
+        team(pack, 'Nossa equipe'),
+        about(pack, 'Sobre a clínica'),
+        schedule(pack),
+        ...(pack.testimonials ? [testimonials(pack, 'Sorrisos que transformamos')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Estética ── asymmetric, procedimentos, galeria de antes/depois
+    case 'estetica':
+      return [
+        header(pack),
+        heroAsymmetric(pack),                     // I
+        services(pack, 'Procedimentos'),
+        gallery(pack, 'Resultados reais'),
+        about(pack, 'Sobre o espaço'),
+        team(pack, 'Profissionais'),
+        differentials(pack, 'Por que nos escolher'),
+        schedule(pack),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Eletricista ── alert, serviços urgentes, áreas atendidas
+    case 'eletricista':
+      return [
+        header(pack),
+        heroAlert(pack),                          // G
+        marquee(pack),
+        services(pack, 'O que resolvemos'),
+        differentials(pack, 'Compromissos'),
+        about(pack, 'Sobre nós'),
+        schedule(pack),
+        ...(pack.stats ? [stats(pack, 'Atendimentos')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Encanador ── split, serviços, processo de atendimento
+    case 'encanador':
+      return [
+        header(pack),
+        heroSplit(pack),                          // A
+        differentials(pack, 'Por que nos chamar'),
+        services(pack, 'O que consertamos'),
+        method(pack, 'Como funciona o atendimento'),
+        about(pack, 'Quem somos'),
+        schedule(pack),
+        ...(pack.stats ? [stats(pack, 'Em números')] : []),
+        brands(pack, 'Atendemos condomínios e empresas'),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Mecânica ── full-bleed, serviços, marcas
+    case 'mecanica':
+      return [
+        header(pack),
+        heroFullbleed(pack),                      // B
+        services(pack, 'Serviços'),
+        brands(pack, 'Trabalhamos com'),
+        about(pack, 'Sobre a oficina'),
+        schedule(pack),
+        differentials(pack, 'Por que nos escolher'),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Assistência Técnica ── alert, serviços, marcas
+    case 'assistencia-tecnica':
+      return [
+        header(pack),
+        heroAlert(pack),                          // G
+        services(pack, 'O que consertamos'),
+        brands(pack, 'Marcas atendidas'),
+        differentials(pack, 'Compromissos'),
+        about(pack, 'Quem somos'),
+        schedule(pack),
+        ...(pack.stats ? [stats(pack, 'Reparos feitos')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Limpeza ── magazine, serviços, processo
+    case 'limpeza':
+      return [
+        header(pack),
+        heroMagazine(pack),                       // C
+        services(pack, 'Serviços de limpeza'),
+        method(pack, 'Como trabalhamos'),
+        about(pack, 'Sobre a empresa'),
+        differentials(pack, 'Por que nos contratar'),
+        ...(pack.stats ? [stats(pack, 'Em números')] : []),
+        schedule(pack),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Pizzaria ── full-bleed, cardápio, processo
+    case 'pizzaria':
+      return [
+        header(pack),
+        heroFullbleed(pack),                      // B
+        menu(pack, 'Cardápio'),
+        differentials(pack, 'O que faz nossa pizza diferente'),
+        method(pack, 'Do forno à sua mesa'),
+        about(pack, 'Nossa história'),
+        schedule(pack),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        reservation(pack, 'Reserve sua mesa'),
+        cta(pack),
+        footer(),
+      ];
+
+    // ── Padaria ── centered, produtos, processo artesanal
+    case 'padaria':
+      return [
+        header(pack),
+        heroCentered(pack),                       // C
+        products(pack, 'Fresquinhos do dia'),
+        method(pack, 'Feito à mão todo dia'),
+        about(pack, 'A padaria'),
+        schedule(pack),
+        differentials(pack, 'Por que somos diferentes'),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Academia ── dark, modalidades, schedule
+    case 'academia':
+      return [
+        header(pack),
+        heroDarkPremium(pack),                    // D
+        services(pack, 'Modalidades'),
+        schedule(pack),
+        about(pack, 'Sobre a academia'),
+        differentials(pack, 'Por que treinar aqui'),
+        ...(pack.stats ? [stats(pack, 'Em números')] : []),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem alunos')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Pet Shop ── split, serviços, time
+    case 'pet-shop':
+      return [
+        header(pack),
+        heroSplit(pack),                          // A
+        services(pack, 'Cuidado completo'),
+        team(pack, 'Quem cuida'),
+        about(pack, 'Sobre nós'),
+        schedule(pack),
+        differentials(pack, 'Por que nos escolher'),
+        ...(pack.testimonials ? [testimonials(pack, 'Tutores contam')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Fotógrafo ── dark, galeria, instrumentos
+    case 'fotografo':
+      return [
+        header(pack),
+        heroDarkPremium(pack),                    // D
+        gallery(pack, 'Trabalhos recentes'),
+        instruments(pack, 'Equipamentos'),
+        services(pack, 'Coberturas'),
+        about(pack, 'Sobre mim'),
+        ...(pack.stats ? [stats(pack, 'Em números')] : []),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        press(pack, 'Onde meu trabalho apareceu'),
+        cta(pack),
+        footer(),
+      ];
+
+    // ── Advogado autônomo ── magazine, áreas, processo jurídico
+    case 'advogado':
+      return [
+        header(pack),
+        heroMagazine(pack),                       // C
+        services(pack, 'Áreas de atuação'),
+        processAdv(pack, 'Como trabalho'),
+        about(pack, 'Sobre mim'),
+        ...(pack.stats ? [stats(pack, 'Casos resolvidos')] : []),
+        press(pack, 'Onde meu trabalho apareceu'),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas frequentes')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Contador ── asymmetric, serviços, processo
+    case 'contador':
+      return [
+        header(pack),
+        heroAsymmetric(pack),                     // I
+        services(pack, 'O que entregamos'),
+        method(pack, 'Como trabalho'),
+        about(pack, 'Sobre mim'),
+        ...(pack.stats ? [stats(pack, 'Empresas atendidas')] : []),
+        differentials(pack, 'Por que me contratar'),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Corretor ── split, imóveis, mapa
+    case 'corretor':
+      return [
+        header(pack),
+        heroSplit(pack),                          // A
+        properties(pack, 'Imóveis em destaque'),
+        about(pack, 'Sobre mim'),
+        differentials(pack, 'Por que me escolher'),
+        method(pack, 'Como funciona'),
+        ...(pack.stats ? [stats(pack, 'Imóveis vendidos')] : []),
+        map(pack),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Personal Trainer ── dark, modalidades, schedule
+    case 'personal':
+      return [
+        header(pack),
+        heroDarkPremium(pack),                    // D
+        services(pack, 'Modalidades de treino'),
+        schedule(pack),
+        about(pack, 'Sobre mim'),
+        method(pack, 'Como funcionam os treinos'),
+        differentials(pack, 'Por que treinar comigo'),
+        ...(pack.stats ? [stats(pack, 'Alunos transformados')] : []),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem alunos')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── Consultor ── asymmetric, sobre, marcas (diferente do advogado)
+    case 'consultor':
+      return [
+        header(pack),
+        heroAsymmetric(pack),                     // I (não C, pra diferenciar do advogado)
+        about(pack, 'Sobre mim'),
+        method(pack, 'Como trabalho'),
+        services(pack, 'Onde atuo'),
+        ...(pack.stats ? [stats(pack, 'Em números')] : []),
+        brands(pack, 'Empresas que atendi'),
+        differentials(pack, 'Por que me contratar'),
+        ...(pack.testimonials ? [testimonials(pack, 'O que dizem clientes')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas comuns')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ════════════════════════════════════════════════════════════
+    // LANDING PAGES (lp-*) — todas sticky-form, mas seções únicas
+    // ════════════════════════════════════════════════════════════
+
+    // ── LP Lead Magnet ── isca digital, form primeiro + benefícios
+    case 'lp-lead-magnet':
+      return [
+        header(pack),
+        heroStickyForm(pack),                     // J
+        services(pack, 'O que você vai aprender'),
+        ...(pack.testimonials ? [testimonials(pack, 'Quem já baixou')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
+        cta(pack),
+        footer(),
+      ];
+
+    // ── LP Waitlist ── lista de espera, prova social antes de FAQ
+    case 'lp-waitlist':
+      return [
+        header(pack),
+        heroStickyForm(pack),                     // J
+        stats(pack, 'Quem já entrou na lista'),
+        services(pack, 'O que vem por aí'),
+        ...(pack.testimonials ? [testimonials(pack, 'Falam do lançamento')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
+        cta(pack),
+        footer(),
+      ];
+
+    // ── LP Produto Único ── landing com form, prova, FAQ
+    case 'lp-produto-unico':
+      return [
+        header(pack),
+        heroStickyForm(pack),                     // J
+        services(pack, 'Benefícios'),
+        stats(pack, 'Em números'),
+        ...(pack.testimonials ? [testimonials(pack, 'Quem já comprou')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
+        cta(pack),
+        footer(),
+      ];
+    case 'lp-agendamento':
+      return [
+        header(pack),
+        heroStickyForm(pack),                     // J
+        schedule(pack),
+        services(pack, 'Como funciona'),
+        about(pack, 'Sobre o profissional'),
+        ...(pack.testimonials ? [testimonials(pack, 'Quem já agendou')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
+        cta(pack),
+        contact(pack),
+        footer(),
+      ];
+
+    // ── LP Evento ── evento, programação, depoimentos antes de FAQ
+    case 'lp-evento':
+      return [
+        header(pack),
+        heroStickyForm(pack),                     // J
+        services(pack, 'Programação'),
+        schedule(pack),
+        about(pack, 'Sobre o evento'),
+        ...(pack.testimonials ? [testimonials(pack, 'Edições anteriores')] : []),
+        ...(pack.faq ? [faq(pack, 'Dúvidas rápidas')] : []),
+        cta(pack),
+        footer(),
+      ];
+
+    default:
+      return null;
   }
 }
 
