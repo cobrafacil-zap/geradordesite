@@ -187,27 +187,34 @@ Se houver erros bloqueantes, o download é cancelado com mensagem clara.
 
 ---
 
-## Deploy
+## Deploy (Vercel)
 
-A aplicação é **100% estática**. A Vercel detecta isso automaticamente.
+O app **`gerador/`** é um **Next.js 14 (SSR)** — com rotas de API, middleware (Supabase) e
+webhooks (Mercado Pago). Por isso o deploy **precisa** ser feito com o *Root Directory*
+apontando para a pasta `gerador`.
 
-```bash
-# 1. Subir o repositório para o GitHub
-git init && git add . && git commit -m "Initial commit" && git push
+### Configuração no Vercel (importante)
 
-# 2. Conectar o repo na Vercel (https://vercel.com/new)
-#    - Framework preset: Other
-#    - Root directory: . (raiz do projeto)
-#    - Build command: (vazio)
-#    - Output directory: gerador     ← vem do vercel.json
-#    - Install command: (vazio)
+Ao conectar o repo em https://vercel.com/new (ou em *Project Settings → General*):
 
-# 3. Deploy automático em todo push na main
-```
+| Campo | Valor |
+|---|---|
+| **Root Directory** | **`gerador`** ← o mais importante |
+| Framework Preset | Next.js (detectado automaticamente) |
+| Build Command | *(padrão: `next build`)* |
+| Install Command | *(padrão)* |
+| Output Directory | *(padrão)* |
 
-O arquivo `vercel.json` na raiz já configura `outputDirectory: gerador` — você não precisa mexer no painel.
+> ⚠️ **Se o *Root Directory* estiver na raiz (`.`), o build quebra** com
+> `[NEXT_NO_VERSION] No Next.js version detected` — porque o `package.json` com `next`
+> está em `gerador/`, não na raiz. Sempre defina **Root Directory = `gerador`**.
 
-> **Alternativa sem GitHub**: `vercel deploy --prod` direto do CLI após `vercel login`.
+O `gerador/vercel.json` já traz a config correta (`framework: nextjs`, headers de segurança).
+O `vercel.json` da raiz é apenas de apoio e **não** deve ser usado como *Root Directory*.
+
+Após configurar, todo push na `main` gera deploy automático.
+
+> **Alternativa sem GitHub**: `cd gerador && vercel deploy --prod` após `vercel login`.
 
 ---
 
