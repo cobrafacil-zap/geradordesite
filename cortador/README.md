@@ -23,7 +23,25 @@ Feito para gameplay (GTA RP e afins), mas funciona com **qualquer vídeo que ten
 
 ---
 
-## 🚀 Começo rápido
+## 🌐 Interface Web (subir o vídeo → cortar → baixar)
+
+Para usar pelo navegador, com upload — **100% privado** (o vídeo é processado na sua máquina):
+
+```bash
+cd cortador
+pip3 install -r requirements-cli.txt -r requirements.txt
+python3 webui.py
+# abra http://localhost:8000
+```
+
+Você sobe a live, escolhe as opções (nº de cortes, formato, modelo de legenda, jogo) e
+baixa os cortes prontos (MP4 + .srt/.ass + relatório). Dá para rodar em **qualquer
+servidor que você controle** (Railway, Render, Fly.io, VPS) — só não use Vercel/serverless,
+que não tem ffmpeg e estoura tempo/memória em vídeos grandes.
+
+---
+
+## 🚀 Começo rápido (CLI)
 
 ```bash
 cd cortador

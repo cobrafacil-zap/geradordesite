@@ -1,5 +1,6 @@
 # Saídas e trabalho
 output/
+output_web/
 _work/
 *.mp4
 *.mov
