@@ -1,0 +1,11 @@
+# Núcleo
+numpy>=1.24
+scipy>=1.10
+Pillow>=10.0
+
+# Transcrição (escolha uma ou use as duas)
+faster-whisper>=1.0
+# mlx-whisper>=0.4        # opcional: acelera em Apple Silicon (M1/M2/M3)
+
+# Opcional: refinar títulos via LLM (se OPENAI_API_KEY estiver definida)
+# openai>=1.0

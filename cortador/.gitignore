@@ -1,0 +1,21 @@
+# Saídas e trabalho
+output/
+_work/
+*.mp4
+*.mov
+*.srt
+*.ass
+*.wav
+!examples/**
+
+# Cache do Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Modelos do whisper (baixados em runtime)
+.cache/
+*.bin
+
+# Sistema
+.DS_Store
