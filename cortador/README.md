@@ -39,6 +39,18 @@ baixa os cortes prontos (MP4 + .srt/.ass + relatório). Dá para rodar em **qual
 servidor que você controle** (Railway, Render, Fly.io, VPS) — só não use Vercel/serverless,
 que não tem ffmpeg e estoura tempo/memória em vídeos grandes.
 
+### Deixar online (Fly.io)
+
+Temos o deploy pronto (Dockerfile + `fly.toml`). Para subir num servidor:
+
+```bash
+cd cortador
+bash scripts/deploy_online.sh   # assistente passo a passo (cria conta, volume, deploy)
+```
+
+O assistente te guia para criar a conta Fly.io (e-mail + cartão — só você pode fazer),
+criar o volume persistente e fazer o deploy em São Paulo. Depois é só abrir a URL e subir o vídeo.
+
 ---
 
 ## 🚀 Começo rápido (CLI)

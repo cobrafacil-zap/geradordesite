@@ -29,7 +29,11 @@ from cortador.styles import list_styles
 
 app = FastAPI(title="Cortador de Vídeos com Legenda")
 
-BASE_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output_web")
+BASE_OUT = os.environ.get(
+    "DATA_DIR",
+    "/data" if os.path.isdir("/data") and os.access("/data", os.W_OK)
+    else os.path.join(os.path.dirname(os.path.abspath(__file__)), "output_web"),
+)
 os.makedirs(BASE_OUT, exist_ok=True)
 
 # jobs em andamento/feitos: id -> {status, out_dir, log, report}
