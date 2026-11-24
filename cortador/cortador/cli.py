@@ -16,7 +16,8 @@ def build_parser() -> argparse.ArgumentParser:
         description="Corta lives/vídeos longos nos melhores takes, com legenda profissional, "
                     "título e hashtags prontos para TikTok/Reels/Shorts.",
     )
-    p.add_argument("input", help="Arquivo de vídeo (live/cap) de entrada")
+    p.add_argument("input", nargs="?", default=None,
+                   help="Arquivo de vídeo (live/cap) de entrada")
     p.add_argument("-o", "--output", default="output", help="Pasta de saída (padrão: output)")
     p.add_argument("-n", "--count", type=int, default=5, help="Quantidade de cortes (padrão: 5)")
     p.add_argument("--min-len", type=float, default=60, help="Duração mínima do corte em s")
@@ -58,6 +59,9 @@ def main(argv=None) -> int:
             print(f"  • {s['key']:12} — {s['label']}: {s['description']}")
         return 0
 
+    if not args.input:
+        print("❌ Informe o arquivo de vídeo de entrada (ou use --styles).", file=sys.stderr)
+        return 1
     if not os.path.exists(args.input):
         print(f"❌ Arquivo não encontrado: {args.input}", file=sys.stderr)
         return 1
