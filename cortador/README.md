@@ -29,7 +29,7 @@ Feito para gameplay (GTA RP e afins), mas funciona com **qualquer vídeo que ten
 cd cortador
 
 # 1) dependências
-pip3 install -r requirements.txt   # faster-whisper, numpy, scipy, pillow
+pip3 install -r requirements-cli.txt   # faster-whisper, numpy, scipy, pillow
 
 # 2) rodar (baixa o modelo de transcrição na primeira vez)
 python3 run.py "minha_live.mp4" -n 5 --style gaming_bold --format 9:16
@@ -156,7 +156,7 @@ cortador/
 
 - **Python 3.9+**
 - **ffmpeg** no PATH (qualquer build com `overlay`/`drawbox` — o padrão já serve)
-- Dependências: `pip3 install -r requirements.txt`
+- Dependências da CLI: `pip3 install -r requirements-cli.txt`
 - (Opcional) `OPENAI_API_KEY` para refinar títulos via LLM
 
 > As legendas são renderizadas com **Pillow + overlay**, então **não** precisa de

@@ -1,0 +1,6 @@
+{
+  "framework": "python",
+  "installCommand": "pip install fastapi uvicorn",
+  "buildCommand": null,
+  "outputDirectory": null
+}
