@@ -135,19 +135,22 @@ def make_titles(text: str, category: str = "geral", game: str = "GTA RP") -> Lis
     kws = extract_keywords(text, 6)
     kw = kws[0].capitalize() if kws else ""
     subject = _clean_phrase(text, 6).rstrip(".")
+    ev = event.lower()
 
     titles = [
-        f"{event} Épico em {game} — e o final ninguém esperava!",
-        f"Não acreditei nesse {event.lower()} em {game} 😱",
-        f"O {event.lower()} que quase deu tudo errado em {game}",
-        f"{event} termina em caos total em {game} (você precisa ver!)",
-        f"Todo mundo achava impossível… até esse {event.lower()}",
-        f"E se o {event.lower()} desse errado? Olha o que aconteceu",
-        f"A história por trás desse {event.lower()} em {game}",
-        f"{event}: a cena mais insana da live 🔥",
+        f"Ninguém esperava esse {ev} em {game} 😱",
+        f"O {ev} que quase deu tudo errado…",
+        f"{event} Épico em {game} — o final vai te chocar",
+        f"Não acreditei no que aconteceu nesse {ev}",
+        f"E se o {ev} desse errado? Olha o resultado",
+        f"A fuga mais insana de {game} termina em {ev}",
+        f"Todo mundo achava impossível… até esse {ev}",
+        f"{event} em {game} do jeito que você nunca viu 🔥",
+        f"Como sobrevivemos a esse {ev} (5 estrelas!)",
+        f"{event}: a cena mais louca da live",
     ]
     if kw and kw.lower() not in event.lower():
-        titles.insert(1, f"{kw}: o momento mais louco de {game}")
+        titles.insert(1, f"{kw}: o momento mais insano de {game}")
     if subject:
         titles.append(f"{subject[:40]} — clipe épico de {game}")
     return titles

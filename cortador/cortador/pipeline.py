@@ -9,7 +9,7 @@ import subprocess
 from dataclasses import dataclass, field, asdict
 from typing import List, Optional
 
-from . import analysis, caption_engine, metadata, paint, virality
+from . import analysis, caption_engine, glossary, metadata, paint, virality
 from .captions import write_subtitles
 from .probe import probe, MediaInfo, TARGET_SIZES
 from .render import RenderConfig, render_clip
@@ -99,6 +99,14 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
             os.remove(wav)
         except OSError:
             pass
+
+        # context grounding: corrige nomes/térmicos do nicho (ex.: "GTA RP", "Skyline")
+        for seg in tr.segments:
+            seg.text = glossary.ground_text(seg.text)
+            for wd in seg.words:
+                wd.text = glossary.ground_text(wd.text)
+        tr.text = glossary.ground_text(tr.text)
+
         log(f"   • transcrição: {len(tr.segments)} segmentos · idioma {tr.language}")
 
         # 2) viralidade
