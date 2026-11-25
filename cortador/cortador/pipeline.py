@@ -43,6 +43,8 @@ class PipelineOptions:
     use_ai: bool = True               # IA (DeepSeek) entende o conteúdo → melhores momentos + títulos
     captions: bool = False            # legenda gravada no vídeo (padrão: não — vídeo limpo)
     title_intro: bool = True          # título (hook) grande no início do corte
+    outro: bool = True                # cartão de final (com transição) ao fim do corte
+    outro_img: Optional[str] = None   # imagem do final (senão gera um cartão)
     render_video: bool = True
     ffmpeg: str = "ffmpeg"
 
@@ -196,6 +198,7 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
                 progress_bar=opts.progress_bar, zoom=opts.zoom,
                 logo=opts.logo, banner=opts.banner,
                 crf=qp["crf"], preset=qp["preset"],
+                outro=opts.outro, outro_img=opts.outro_img,
             )
             render_clip(input_path, info, w.start, w.duration,
                         (events if opts.captions else []), mp4,

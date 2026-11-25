@@ -45,6 +45,9 @@ class RenderConfig:
     audio_normalize: bool = True   # normaliza o volume (lives costumam sair baixas)
     audio_target: str = "-14"      # LUFS alvo (padrão de streaming)
     title_intro: bool = True       # mostra o título grande no começo do corte
+    outro: bool = True             # cartão de final (com transição) ao fim do corte
+    outro_img: Optional[str] = None  # imagem do final (senão gera um cartão automático)
+    outro_dur: float = 2.6         # duração do cartão de final
     crf: int = 17                  # qualidade alta (menor = melhor; 17 ≈ quase sem perda)
     preset: str = "medium"         # codificação mais eficiente (melhor qualidade)
     audio_bitrate: str = "256k"    # áudio com mais fidelidade
@@ -150,7 +153,7 @@ def build_filtergraph(
         parts.append(f"[{len(extra_inputs)}:v]format=rgba[{lbl}]")
         nxt = f"[v{n}]"
         parts.append(
-            f"{cur}[{lbl}]overlay=x=(w-overlay_w)/2:y=(h-overlay_h)*0.34:"
+            f"{cur}[{lbl}]overlay=x=(w-overlay_w)/2:y=(h-overlay_h)*0.52:"
             f"enable='between(t,0.15,{title_duration:.2f})':eof_action=repeat{nxt}"
         )
         cur = nxt
@@ -158,6 +161,37 @@ def build_filtergraph(
 
     parts.append(f"{cur}format=yuv420p[vout]")
     return ";".join(parts), out_w, out_h, extra_inputs, []
+
+
+def _append_outro(main_mp4: str, outro_img: str, out_w: int, out_h: int,
+                  duration: float = 2.6, workdir: str = ".", ffmpeg: str = "ffmpeg"):
+    """Anexa o cartão de final ao fim do vídeo, com transição (fade-in da preto)."""
+    outro_seg = os.path.join(workdir, "_outro_seg.mp4")
+    # imagem -> segmento (fade-in), com áudio silencioso para poder concatenar
+    subprocess.run([
+        ffmpeg, "-y", "-v", "error",
+        "-loop", "1", "-t", f"{duration:.2f}", "-i", outro_img,
+        "-f", "lavfi", "-t", f"{duration:.2f}", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+        "-vf", (f"scale={out_w}:{out_h}:force_original_aspect_ratio=increase,"
+                f"crop={out_w}:{out_h},fade=in:st=0:d=0.5,format=yuv420p"),
+        "-map", "0:v", "-map", "1:a",
+        "-c:v", "libx264", "-preset", "medium", "-crf", "17",
+        "-c:a", "aac", "-b:a", "192k", "-r", "25", outro_seg,
+    ], check=True)
+    # concatena: vídeo principal + cartão de final
+    tmp_final = main_mp4 + ".cat.mp4"
+    subprocess.run([
+        ffmpeg, "-y", "-v", "error", "-i", main_mp4, "-i", outro_seg,
+        "-filter_complex", "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[v][a]",
+        "-map", "[v]", "-map", "[a]",
+        "-c:v", "libx264", "-preset", "medium", "-crf", "17",
+        "-c:a", "aac", "-b:a", "192k", tmp_final,
+    ], check=True)
+    os.replace(tmp_final, main_mp4)
+    try:
+        os.remove(outro_seg)
+    except OSError:
+        pass
 
 
 def render_clip(
@@ -228,6 +262,25 @@ def render_clip(
     cmd += [out_path]
 
     subprocess.run(cmd, check=True)
+
+    # cartão de final (outro) com transição
+    if cfg.outro:
+        outro_png = cfg.outro_img
+        gen = False
+        if not outro_png or not os.path.exists(outro_png):
+            outro_png = os.path.join(workdir, f"_outro_card_{os.path.basename(out_path)}.jpg")
+            paint.render_outro_card(outro_png, out_w, out_h)
+            gen = True
+        try:
+            _append_outro(out_path, outro_png, out_w, out_h,
+                          duration=cfg.outro_dur, workdir=workdir, ffmpeg=ffmpeg)
+        except Exception:
+            pass
+        if gen and os.path.exists(outro_png):
+            try:
+                os.remove(outro_png)
+            except OSError:
+                pass
 
     # limpa PNGs temporários
     for png in cap_pngs:

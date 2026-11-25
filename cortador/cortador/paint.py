@@ -250,32 +250,57 @@ def render_caption_png(
 # Cartões genéricos (logo, banner/contador, CTA)
 # ---------------------------------------------------------------------------
 
-# paletas do título (fundo, texto) — caixa com contraste, variando por corte (inclui verde)
+# paletas do título — APENAS amarelo, preto e branco
 _TITLE_PALETTES = [
-    ((24, 24, 27, 242), (255, 255, 255, 255)),   # caixa preta / texto branco
-    ((255, 255, 255, 244), (17, 17, 20, 255)),   # caixa branca / texto preto
-    ((34, 197, 94, 240), (255, 255, 255, 255)),  # caixa verde / texto branco
-    ((20, 83, 45, 244), (187, 247, 208, 255)),   # caixa verde escuro / texto verde claro
-    ((250, 204, 21, 244), (20, 20, 20, 255)),    # caixa amarela / texto preto
-    ((24, 24, 27, 242), (134, 239, 172, 255)),   # caixa preta / texto verde claro
+    ((24, 24, 27, 244), (255, 255, 255, 255)),   # caixa preta / texto branco
+    ((255, 255, 255, 246), (17, 17, 20, 255)),   # caixa branca / texto preto
+    ((250, 204, 21, 246), (20, 20, 20, 255)),    # caixa amarela / texto preto
+    ((24, 24, 27, 244), (250, 204, 21, 255)),    # caixa preta / texto amarelo
 ]
+
+
+def _is_emoji_char(ch: str) -> bool:
+    o = ord(ch)
+    return ((0x1F000 <= o <= 0x1FAFF) or (0x2600 <= o <= 0x27BF) or
+            (0x2B00 <= o <= 0x2BFF) or (0x2190 <= o <= 0x21FF) or
+            o in (0xFE0E, 0xFE0F, 0x203C, 0x2049, 0x2764))
+
+
+def _draw_mixed_line(img, x_center, y, line, text_font, fill, measure):
+    """Desenha uma linha centralizada; emojis viram tiles coloridos inline."""
+    draw = ImageDraw.Draw(img)
+    space_w = int(measure.textlength(" ", font=text_font))
+    toks = line.split(" ")
+    items = []
+    for t in toks:
+        if t and all(_is_emoji_char(c) for c in t):
+            tile = _render_emoji_tile(t, int(getattr(text_font, "size", 60)))
+            items.append(("e", tile, tile.width if tile is not None else 0))
+        else:
+            items.append(("t", t, int(measure.textlength(t, font=text_font))))
+    total = sum(w for _, _, w in items) + space_w * max(0, len(toks) - 1)
+    x = x_center - total // 2
+    for kind, obj, w in items:
+        if kind == "e":
+            if obj is not None:
+                img.alpha_composite(obj, (x, y))
+        else:
+            draw.text((x, y), obj, font=text_font, fill=fill)
+        x += w + space_w
 
 
 def render_title(title: str, out_path: str, canvas_w: int = 1080,
                  font_name: str = "Montserrat-Black", variant: int = 0) -> Optional[str]:
-    """Título (hook) em caixa/badge: fundo escuro/claro/verde + texto na cor inversa.
-
-    'variant' faz o estilo variar entre os cortes (preto, branco, verde…).
-    Aparece só no início do corte (como no modelo de referência).
-    """
+    """Título (hook) em caixa com PONTAS RETAS: fundo preto/branco/amarelo + texto
+    na cor inversa. Emojis aparecem inline. Só no início do corte."""
     title = (title or "").strip()
     if not title:
         return None
     bg, fg = _TITLE_PALETTES[variant % len(_TITLE_PALETTES)]
 
-    size = max(56, canvas_w // 13)
+    size = max(54, canvas_w // 13)
     font = load_font(font_name, size)
-    pad = int(size * 0.6)
+    pad = int(size * 0.55)
     max_w = canvas_w - 2 * pad
     draw_tmp = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
 
@@ -293,29 +318,28 @@ def render_title(title: str, out_path: str, canvas_w: int = 1080,
         return lines
 
     lines = wrap(font, max_w)
-    while len(lines) > 3 and size > 32:
+    while len(lines) > 3 and size > 30:
         size = int(size * 0.9)
         font = load_font(font_name, size)
-        pad = int(size * 0.6)
+        pad = int(size * 0.55)
         max_w = canvas_w - 2 * pad
         lines = wrap(font, max_w)
 
     ascent, descent = font.getmetrics()
-    line_h = int((ascent + descent) * 1.05)
+    line_h = int((ascent + descent) * 1.06)
     text_w = max(int(draw_tmp.textlength(" ".join(l), font=font)) for l in lines)
     box_w = min(text_w + 2 * pad, canvas_w)
-    box_h = len(lines) * line_h + int(pad * 1.2)
+    box_h = len(lines) * line_h + int(pad * 1.15)
 
     img = Image.new("RGBA", (canvas_w, box_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     x0 = (canvas_w - box_w) // 2
-    draw.rounded_rectangle([x0, 0, x0 + box_w, box_h], radius=int(size * 0.34), fill=bg)
+    # PONTAS RETAS (rectangle, sem raio)
+    draw.rectangle([x0, 0, x0 + box_w, box_h], fill=bg)
 
-    y = int(pad * 0.6)
+    y = int(pad * 0.55)
     for l in lines:
-        lw = int(draw_tmp.textlength(" ".join(l), font=font))
-        x = (canvas_w - lw) // 2
-        draw.text((x, y), " ".join(l), font=font, fill=fg)
+        _draw_mixed_line(img, canvas_w // 2, y, " ".join(l), font, fg, draw_tmp)
         y += line_h
 
     img.save(out_path)
@@ -353,6 +377,48 @@ def render_text_card(
         _draw_token(draw, (x, y), txt, fnt, col, (0, 0, 0, 220), 2, (3, 3, (0, 0, 0, 120)))
         y += lh
     img.save(out_path)
+    return out_path
+
+
+def render_outro_card(out_path: str, w: int = 1080, h: int = 1920,
+                      titulo: str = "Obrigado por assistir!",
+                      sub: str = "Jogando com Nice e Pri",
+                      linhas: tuple = ("👍  Curtir", "▶  Se Inscrever", "🔔  Ativar o Sininho")) -> str:
+    """Cartão de final (outro) — escuro com neon, no estilo dos grandes canais."""
+    img = Image.new("RGBA", (w, h), (12, 10, 24, 255))
+    draw = ImageDraw.Draw(img)
+    # brilho de fundo
+    for cx, cy, col in ((int(w*0.2), int(h*0.25), (255, 45, 111, 60)),
+                        (int(w*0.8), int(h*0.7), (34, 224, 255, 55))):
+        for r in range(280, 0, -20):
+            draw.ellipse([cx-r, cy-r, cx+r, cy+r], fill=col)
+    img = img.filter(ImageFilter.GaussianBlur(60))
+    draw = ImageDraw.Draw(img)
+
+    # título grande
+    ft = load_font("Montserrat-Black", 92)
+    for i, ln in enumerate(titulo.split("\n")):
+        wd = int(draw.textlength(ln, font=ft))
+        draw.text(((w - wd)//2, int(h*0.30) + i*100), ln, font=ft,
+                  fill=(255, 255, 255, 255), stroke_width=4, stroke_fill=(0, 0, 0, 255))
+    # subtítulo (destaque amarelo)
+    fs = load_font("Montserrat-Black", 64)
+    wd = int(draw.textlength(sub, font=fs))
+    draw.text(((w - wd)//2, int(h*0.30) + 2*100 + 30), sub, font=fs,
+              fill=(250, 204, 21, 255), stroke_width=3, stroke_fill=(0, 0, 0, 255))
+
+    # botões (retângulos neon)
+    fb = load_font("Montserrat-Bold", 52)
+    y0 = int(h*0.62)
+    cores = [(255, 45, 111), (34, 224, 255), (250, 204, 21)]
+    for i, ln in enumerate(linhas):
+        bw, bh = int(w*0.72), 96
+        bx, by = (w-bw)//2, y0 + i*120
+        c = cores[i % 3]
+        draw.rounded_rectangle([bx, by, bx+bw, by+bh], radius=18, outline=c, width=5)
+        _draw_mixed_line(img, bx + bw//2, by + 18, ln, fb, (255, 255, 255, 255), draw)
+
+    img.convert("RGB").save(out_path, quality=92)
     return out_path
 
 
