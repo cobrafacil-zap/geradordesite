@@ -69,21 +69,27 @@ def _clean(s: str) -> str:
 
 
 def title_for(text: str, game: str = "", model: str = DEFAULT_MODEL) -> Optional[str]:
-    """Título coerente e chamativo (PT-BR) para o trecho — faz sentido com o conteúdo."""
+    """Título criativo (PT-BR) no estilo viral — faz sentido com o conteúdo."""
     if not text.strip():
         return None
     onde = f" do jogo {game}" if game else ""
     prompt = (
-        "Você é um editor viral de vídeos curtos (TikTok/Reels/Shorts) brasileiro. "
-        f"Veja a transcrição de um clipe{onde} e escreva UM título curto em português do Brasil.\n\n"
-        "Regras: máximo 60 caracteres; seja CLARO e faça sentido (descreva o que realmente acontece); "
-        "crie curiosidade; pode terminar com uma emoji; NÃO invente nada fora do texto; "
-        "NÃO use texto genérico tipo 'vídeo incrível'.\n\n"
-        f"Transcrição:\n\"\"\"{text[:900]}\"\"\"\n\n"
+        "Você é um editor viral de vídeos curtos brasileiro (TikTok/Reels/Shorts), especialista em games.\n"
+        f"Escreva UM título curto e CRIATIVO em português do Brasil para este clipe{onde}.\n\n"
+        "Estilo desejado (sigam estes exemplos):\n"
+        "- De caindo aos pedaços a luxo: o glow-up em Vice City!\n"
+        "- Jason e Lucia: O Encontro Desajeitado na Balada!\n"
+        "- A casa mais aleatória dos games! 🤣\n"
+        "- O rolê de carro virou um filme de ação! 🚨\n\n"
+        "Regras: máximo 60 caracteres; criativo, divertido e com personalidade; "
+        "faça sentido (descreva o que realmente acontece no clipe); "
+        "pode citar personagens ou locais do jogo quando relevante; "
+        "crie curiosidade; termine com UMA emoji; NÃO invente nada fora do texto.\n\n"
+        f"Transcrição do clipe:\n\"\"\"{text[:900]}\"\"\"\n\n"
         "Responda APENAS com o título."
     )
     try:
-        return _clean(_chat(prompt, model=model, temperature=0.5)) or None
+        return _clean(_chat(prompt, model=model, temperature=0.6)) or None
     except Exception:
         return None
 
