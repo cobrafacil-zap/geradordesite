@@ -45,9 +45,9 @@ class RenderConfig:
     audio_normalize: bool = True   # normaliza o volume (lives costumam sair baixas)
     audio_target: str = "-14"      # LUFS alvo (padrão de streaming)
     title_intro: bool = True       # mostra o título grande no começo do corte
-    crf: int = 20
-    preset: str = "veryfast"
-    audio_bitrate: str = "192k"
+    crf: int = 17                  # qualidade alta (menor = melhor; 17 ≈ quase sem perda)
+    preset: str = "medium"         # codificação mais eficiente (melhor qualidade)
+    audio_bitrate: str = "256k"    # áudio com mais fidelidade
     fps: Optional[int] = None
 
 

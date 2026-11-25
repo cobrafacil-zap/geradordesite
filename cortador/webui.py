@@ -160,7 +160,8 @@ async def processar(
     n_cortes: int = Form(4),
     formato: str = Form("9:16"),
     estilo: str = Form("gaming_bold"),
-    modelo: str = Form("base"),
+    modelo: str = Form("small"),
+    qualidade: str = Form("maxima"),
     jogo: str = Form(""),
     idioma: str = Form("pt"),
     emoji: str = Form("on"),
@@ -189,6 +190,7 @@ async def processar(
                 game=(jogo.strip() or None),
                 language=idioma,
                 model_size=modelo,
+                render_quality=qualidade,
                 emoji=(emoji == "on"),
                 progress_bar=(barra == "on"),
                 render_video=True,
@@ -242,36 +244,105 @@ def job_page(job_id: str):
     return _render_results(job_id, job["out_dir"], job.get("report") or {"clips": []})
 
 
+def _fmt_time(s) -> str:
+    s = int(s or 0)
+    m, sec = divmod(s, 60)
+    h, m = divmod(m, 60)
+    return f"{h}:{m:02d}:{sec:02d}" if h else f"{m:02d}:{sec:02d}"
+
+
+def _score_class(v) -> str:
+    try:
+        v = float(v)
+    except Exception:
+        return "s-mid"
+    return "s-hi" if v >= 75 else ("s-mid" if v >= 55 else "s-low")
+
+
 def _render_results(job_id: str, out_dir: str, report: dict) -> str:
     cards = []
-    for c in report.get("clips", []):
+    queue = []
+    clips = report.get("clips", [])
+    for i, c in enumerate(clips, 1):
         m = c.get("metadata", {})
         v = c.get("virality", {})
-        fname = c.get("file")
-        links = []
+        fname = c.get("file") or ""
+        title = (m.get("title") or f"Corte {i}").strip()
+        score = v.get("total", 0)
+        start, end = c.get("start", 0), c.get("end", 0)
+        desc = (m.get("description") or "").splitlines()[0] if m.get("description") else ""
+        tags = m.get("hashtags_str", "")
+
+        dl = []
         if fname:
-            links.append(f'<a class="dl" href="/saida/{job_id}/cortes/{fname}">⬇ MP4</a>')
-        for key in ("srt", "ass"):
-            sub = (c.get("subtitles") or {}).get(key)
+            dl.append(f'<a class="icon-btn" title="Baixar MP4" href="/saida/{job_id}/cortes/{fname}">⬇</a>')
+        for k, ic in (("srt", "📄"), ("ass", "🎨")):
+            sub = (c.get("subtitles") or {}).get(k)
             if sub:
-                links.append(f'<a class="dl ghost" href="/saida/{job_id}/cortes/{sub}">{key.upper()}</a>')
-        dur = c.get("duration")
+                dl.append(f'<a class="icon-btn" title="Legenda {k.upper()}" href="/saida/{job_id}/cortes/{sub}">{ic}</a>')
+        dl.append(f'<span class="icon-btn" title="Agendar (em breve)">🗓</span>')
+        dl.append(f'<span class="icon-btn" title="Recortar (em breve)">✂</span>')
+
         cards.append(f"""
-        <div class="card">
-          <div class="vtag">{v.get('label','')} · <b>{v.get('total','')}</b>/100{f' · {dur:.0f}s' if dur else ''}</div>
-          <h3>{m.get('title','(sem título)')}</h3>
-          <div class="meta">{m.get('hashtags_str','')}</div>
-          <div class="desc">{(m.get('description','') or '').splitlines()[0] if m.get('description') else ''}</div>
-          <div class="links">{' '.join(links)}</div>
+        <div class="clip">
+          <div class="clip-head"><input type="checkbox"><div class="clip-title">#{i} {title}</div></div>
+          <div class="thumbwrap">
+            <img src="/thumb/{job_id}/{fname}" loading="lazy" onerror="this.style.display='none'">
+            <div class="play"><span>▶</span></div>
+            <div class="timerange">{_fmt_time(start)} - {_fmt_time(end)}</div>
+            <div class="score {_score_class(score)}"><b>{int(round(float(score) or 0))}</b><i>/100</i></div>
+          </div>
+          <div class="clip-actions">{''.join(dl)}</div>
+          <div class="clip-desc">{desc}<br><span style="opacity:.65">{tags}</span></div>
         </div>""")
+        queue.append(
+            f'<div class="qrow"><span class="t">#{i} {title}</span>'
+            f'<span class="ok">✓</span>'
+            f'<a class="icon-btn" title="Baixar" href="/saida/{job_id}/cortes/{fname}">⬇</a></div>'
+        )
+
+    n = len(clips)
+    topbar = (
+        f"<div class='topbar'><div class='tab'>📋 Momentos Virais <span class='cnt'>{n}</span></div>"
+        f"<button class='btn-find' onclick=\"alert('Em breve: buscar momentos por texto')\">+ Encontrar Momentos</button></div>"
+        f"<div class='selall'><input type='checkbox' onclick=\"document.querySelectorAll('.clip input').forEach(c=>c.checked=this.checked)\"> "
+        f"Selecionar todos os {n} clipes</div>"
+    )
+    queue_html = (
+        f"<div class='queue'><h4>Fila de Exportação <span style='color:#2ee6a8'>{n}/{n}</span></h4>"
+        + "".join(queue)
+        + "</div>"
+    )
 
     report_link = ""
     if os.path.exists(os.path.join(out_dir, "report.md")):
-        report_link = f'<a class="dl" href="/saida/{job_id}/report.md">📄 Relatório completo</a>'
+        report_link = f'<a class="dl" href="/saida/{job_id}/report.md">📄 Relatório</a>'
 
-    return RESULT.replace("__CARDS__", "\n".join(cards) or "<p>Nenhum corte gerado.</p>").replace(
-        "__REPORT__", report_link
-    ).replace("__ID__", job_id)
+    return (RESULT
+            .replace("__TOPBAR__", topbar)
+            .replace("__CARDS__", "\n".join(cards) or "<p>Nenhum corte gerado.</p>")
+            .replace("__QUEUE__", queue_html)
+            .replace("__REPORT__", report_link)
+            .replace("__ID__", job_id))
+
+
+@app.get("/thumb/{job_id}/{clipfile}")
+def thumb(job_id: str, clipfile: str):
+    base = os.path.join(BASE_OUT, job_id, "cortes")
+    mp4 = os.path.join(base, clipfile)
+    if not os.path.exists(mp4):
+        return HTMLResponse("", status_code=404)
+    jpg = os.path.join(base, os.path.splitext(clipfile)[0] + "_thumb.jpg")
+    if not os.path.exists(jpg):
+        import subprocess
+        subprocess.run(
+            ["ffmpeg", "-y", "-v", "error", "-ss", "1.5", "-i", mp4,
+             "-frames:v", "1", "-vf", "scale=520:-2", jpg],
+            capture_output=True,
+        )
+        if not os.path.exists(jpg):
+            return HTMLResponse("", status_code=404)
+    return FileResponse(jpg, media_type="image/jpeg")
 
 
 @app.get("/saida/{job_id}/{path:path}")
@@ -308,6 +379,37 @@ input[type=number],input[type=text],select{width:100%;padding:12px 14px;border-r
 pre{background:#070a12;border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto;color:#cdd6f4;font-size:13px}
 .spin{width:38px;height:38px;border:4px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:sp 1s linear infinite;margin:24px 0}
 @keyframes sp{to{transform:rotate(360deg)}}
+
+/* ===== Momentos Virais (grade de cards) ===== */
+.topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 18px}
+.tab{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-weight:700}
+.tab .cnt{background:var(--brand);color:#fff;border-radius:999px;padding:1px 9px;font-size:12px}
+.btn-find{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:12px;background:transparent;border:1px dashed var(--line);color:var(--muted);cursor:pointer}
+.selall{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:14px;margin:2px 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px}
+.clip{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+.clip-head{display:flex;align-items:center;gap:10px;padding:14px 16px 10px}
+.clip-head input{width:18px;height:18px;accent-color:var(--brand)}
+.clip-title{font-weight:800;font-size:15px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thumbwrap{position:relative;margin:0 16px;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:16/10}
+.thumbwrap img{width:100%;height:100%;object-fit:cover;display:block}
+.play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.15)}
+.play span{width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.55);display:grid;place-items:center;font-size:20px;color:#fff;border:2px solid rgba(255,255,255,.7)}
+.timerange{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:3px 8px;border-radius:8px;font-variant-numeric:tabular-nums}
+.score{position:absolute;left:10px;bottom:10px;display:flex;align-items:baseline;gap:3px;font-weight:900}
+.score b{font-size:30px;line-height:1}
+.score i{font-size:13px;font-style:normal;opacity:.85}
+.s-hi{color:#2ee6a8}.s-mid{color:#ffd400}.s-low{color:#ff7a7a}
+.clip-actions{display:flex;gap:6px;padding:12px 16px 4px;flex-wrap:wrap}
+.icon-btn{width:36px;height:36px;border-radius:10px;background:var(--card2);border:1px solid var(--line);color:#cdd6f4;display:grid;place-items:center;cursor:pointer;text-decoration:none;font-size:15px}
+.icon-btn:hover{border-color:var(--brand);color:#fff}
+.clip-desc{padding:8px 16px 16px;color:var(--muted);font-size:13.5px;line-height:1.5}
+.queue{position:fixed;top:16px;right:16px;width:340px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;max-height:70vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);z-index:50}
+.queue h4{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}
+.qrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
+.qrow .t{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qrow .ok{color:#2ee6a8}
+@media(max-width:640px){.grid{grid-template-columns:1fr}.queue{position:static;width:auto;margin-top:16px}}
 """
 
 PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
@@ -330,12 +432,20 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "</div>"
         "<div class='row'>"
         "<div><label>Modelo de legenda</label><select name='estilo'>__STYLE_OPTIONS__</select></div>"
-        "<div><label>Velocidade × qualidade</label><select name='modelo'>"
-        "<option value='base' selected>Rápido (base)</option>"
-        "<option value='small'>Equilibrado (small)</option>"
-        "<option value='medium'>Mais preciso (medium, lento)</option>"
-        "<option value='tiny'>Turbo (tiny, menos preciso)</option>"
+        "<div><label>Qualidade do vídeo</label><select name='qualidade'>"
+        "<option value='maxima' selected>Máxima (recomendado)</option>"
+        "<option value='alta'>Alta</option>"
+        "<option value='normal'>Normal (mais leve)</option>"
         "</select></div>"
+        "</div>"
+        "<div class='row'>"
+        "<div><label>Transcrição PT-BR (título + legenda)</label><select name='modelo'>"
+        "<option value='small' selected>Boa (small) — recomendado</option>"
+        "<option value='medium'>Melhor (medium, mais lento)</option>"
+        "<option value='base'>Rápida (base)</option>"
+        "<option value='tiny'>Turbo (tiny, menos precisa)</option>"
+        "</select></div>"
+        "<div></div>"
         "</div>"
         "<label>Jogo / nicho (opcional — deixe vazio para detectar pelo conteúdo)</label>"
         "<input type='text' name='jogo' value='' placeholder='auto-detectar (ex.: GTA, corrida, podcast)'>"
@@ -361,12 +471,12 @@ PROCESSING = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
 
 RESULT = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
           "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-          "<title>Cortes prontos</title><style>" + _CSS + "</style></head><body><div class='wrap'>"
-          "<h1>✅ Cortes prontos!</h1>"
-          "<p class='lead'>Baixe os vídeos legendados, as legendas (.srt/.ass) e o relatório.</p>"
-          "__CARDS__"
-          "<p style='margin-top:20px'>__REPORT__ &nbsp; <a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a> &nbsp; <a class='dl ghost' href='/'>← Cortar outro vídeo</a></p>"
-          "</div></body></html>")
+          "<title>Momentos Virais</title><style>" + _CSS + "</style></head><body><div class='wrap'>"
+          "<h1 style='margin:10px 0 20px'>🔥 Momentos Virais</h1>"
+          "__TOPBAR__"
+          "<div class='grid'>__CARDS__</div>"
+          "<p style='margin:26px 0 60px'>__REPORT__ &nbsp; <a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a> &nbsp; <a class='dl ghost' href='/'>← Cortar outro vídeo</a></p>"
+          "</div>__QUEUE__</body></html>")
 
 
 JOBS_PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"

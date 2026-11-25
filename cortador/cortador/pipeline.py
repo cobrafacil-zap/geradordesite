@@ -32,12 +32,21 @@ class PipelineOptions:
     zoom: float = 0.0
     logo: Optional[str] = None
     banner: Optional[str] = None
-    game: str = "GTA RP"
+    game: Optional[str] = None
     language: str = "pt"
     model_size: str = "small"
     engine: str = "faster"            # faster | mlx
+    render_quality: str = "alta"      # normal | alta | maxima
     render_video: bool = True
     ffmpeg: str = "ffmpeg"
+
+
+# qualidade da codificação do vídeo (menor CRF = melhor imagem)
+QUALITY_PRESETS = {
+    "normal": {"crf": 21, "preset": "faster"},
+    "alta": {"crf": 17, "preset": "medium"},
+    "maxima": {"crf": 14, "preset": "slow"},
+}
 
 
 def _slugify(text: str, max_len: int = 40) -> str:
@@ -47,8 +56,10 @@ def _slugify(text: str, max_len: int = 40) -> str:
 
 
 def _extract_audio_range(src: str, start: float, end: float, out_wav: str, sr: int = 16000):
+    # normaliza o volume para o Whisper (áudio alto = transcrição melhor), sem cortar a fala
     cmd = ["ffmpeg", "-y", "-v", "error", "-ss", f"{start:.3f}", "-i", src,
-           "-t", f"{max(0.5, end - start):.3f}", "-vn", "-ac", "1", "-ar", str(sr), out_wav]
+           "-t", f"{max(0.5, end - start):.3f}", "-vn", "-ac", "1", "-ar", str(sr),
+           "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", out_wav]
     subprocess.run(cmd, check=True)
     return out_wav
 
@@ -140,10 +151,12 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
         # 7) renderiza o vídeo
         render_status = "pulado"
         if opts.render_video:
+            qp = QUALITY_PRESETS.get(opts.render_quality, QUALITY_PRESETS["alta"])
             rcfg = RenderConfig(
                 target_format=target_fmt, reframe=opts.reframe, style=opts.style,
                 progress_bar=opts.progress_bar, zoom=opts.zoom,
                 logo=opts.logo, banner=opts.banner,
+                crf=qp["crf"], preset=qp["preset"],
             )
             render_clip(input_path, info, w.start, w.duration, events, mp4,
                         cfg=rcfg, workdir=work_dir, ffmpeg=opts.ffmpeg,
