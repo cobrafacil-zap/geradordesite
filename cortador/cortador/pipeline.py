@@ -11,6 +11,7 @@ from typing import List, Optional
 
 from . import analysis, caption_engine, glossary, metadata, paint, virality
 from . import speech_enhance
+from . import ai_understand
 from .captions import write_subtitles
 from .probe import probe, MediaInfo, TARGET_SIZES
 from .render import RenderConfig, render_clip
@@ -39,6 +40,7 @@ class PipelineOptions:
     engine: str = "faster"            # faster | mlx
     render_quality: str = "alta"      # normal | alta | maxima
     speech_enhance: bool = True       # isola a voz do jogo (Speech Enhancer) p/ transcrever certo
+    use_ai: bool = True               # IA (DeepSeek) entende o conteúdo → melhores momentos + títulos
     captions: bool = False            # legenda gravada no vídeo (padrão: não — vídeo limpo)
     title_intro: bool = True          # título (hook) grande no início do corte
     render_video: bool = True
@@ -86,33 +88,32 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
     log(f"   • Formato de saída:  {target_fmt}")
 
     log("🎧 Analisando áudio para achar os melhores takes…")
+    ai_on = opts.use_ai and ai_understand.is_available()
+    n_cand = (opts.count * 2) if ai_on else opts.count   # mais candidatos para a IA escolher
     wins, stats = analysis.analyze_and_select(
-        input_path, count=opts.count, min_len=opts.min_len,
+        input_path, count=n_cand, min_len=opts.min_len,
         max_len=opts.max_len, target_len=opts.target_len,
     )
-    log(f"   • {len(wins)} janelas candidatas selecionadas")
+    log(f"   • {len(wins)} janelas candidatas")
 
     style = get_style(opts.style)
     out_w, out_h = TARGET_SIZES.get(target_fmt, TARGET_SIZES["9:16"])
 
-    results = []
-    for i, w in enumerate(wins, 1):
-        log(f"\n🎬 Corte {i}/{len(wins)}  [{w.start:.0f}s → {w.end:.0f}s]  ({w.duration:.0f}s)")
-
-        # 1) transcreve o trecho (com Speech Enhancer: voz isolada do barulho do jogo)
-        wav = os.path.join(work_dir, f"win_{i}.wav")
+    # 1) transcreve TODOS os candidatos (para a IA entender o conteúdo)
+    transcripts = []
+    for k, w in enumerate(wins):
+        log(f"   • transcrevendo candidato {k + 1}/{len(wins)} [{w.start:.0f}s]")
+        wav = os.path.join(work_dir, f"win_{k}.wav")
         _extract_audio_range(input_path, w.start, w.end, wav)
         twav = wav
         if opts.speech_enhance:
-            voz = os.path.join(work_dir, f"win_{i}_voz.wav")
+            voz = os.path.join(work_dir, f"win_{k}_voz.wav")
             try:
-                log("   • Speech Enhancer: isolando a voz do jogo…")
                 speech_enhance.isolate_vocals(wav, voz)
                 twav = voz
             except Exception as e:
-                log(f"   • Speech Enhancer pulado: {e}")
+                log(f"     Speech Enhancer pulado: {e}")
         tr = transcribe(twav, engine=opts.engine, model_size=opts.model_size, language=opts.language)
-        # reajusta timestamps para o tempo absoluto da live
         for seg in tr.segments:
             seg.start += w.start
             seg.end += w.start
@@ -124,14 +125,30 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
                 os.remove(_f)
             except OSError:
                 pass
-
-        # context grounding: corrige nomes/térmicos do nicho (ex.: "GTA RP", "Skyline")
         for seg in tr.segments:
             seg.text = glossary.ground_text(seg.text)
             for wd in seg.words:
                 wd.text = glossary.ground_text(wd.text)
         tr.text = glossary.ground_text(tr.text)
+        transcripts.append(tr)
 
+    # 2) IA entende o conteúdo e escolhe os MELHORES momentos
+    best_idx = list(range(min(opts.count, len(wins))))
+    if ai_on and len(wins) > opts.count:
+        try:
+            cands = [{"text": transcripts[j].text} for j in range(len(wins))]
+            picked = ai_understand.pick_best_moments(cands, opts.count)
+            if picked:
+                best_idx = picked[:opts.count]
+            log(f"   • 🧠 IA escolheu os melhores momentos: {best_idx}")
+        except Exception as e:
+            log(f"   • IA na escolha pulada: {e}")
+
+    results = []
+    for i, j in enumerate(best_idx, 1):
+        w = wins[j]
+        tr = transcripts[j]
+        log(f"\n🎬 Corte {i}/{len(best_idx)}  [{w.start:.0f}s → {w.end:.0f}s]  ({w.duration:.0f}s)")
         log(f"   • transcrição: {len(tr.segments)} segmentos · idioma {tr.language}")
 
         # 2) viralidade
@@ -143,7 +160,15 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
             tr.text, category=metadata.detect_category(tr.text),
             game=opts.game, virality_label=vs.label, virality_total=vs.total,
         )
-        meta = metadata.llm_refine(tr.text, meta) or meta
+        # IA (DeepSeek): entende o conteúdo e escreve título/descrição que fazem sentido
+        if opts.use_ai and ai_understand.is_available():
+            ai_t = ai_understand.title_for(tr.text, game=opts.game or "")
+            if ai_t:
+                meta["title"] = ai_t
+                meta["title_options"] = [ai_t] + [x for x in meta.get("title_options", []) if x != ai_t]
+            ai_d = ai_understand.describe(tr.text)
+            if ai_d:
+                meta["description"] = ai_d
 
         # 4) eventos de legenda
         events = caption_engine.build_events(
@@ -175,7 +200,8 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
             render_clip(input_path, info, w.start, w.duration,
                         (events if opts.captions else []), mp4,
                         cfg=rcfg, workdir=work_dir, ffmpeg=opts.ffmpeg,
-                        title=(meta.get("title") if opts.title_intro else None))
+                        title=(meta.get("title") if opts.title_intro else None),
+                        title_variant=i)
             render_status = "ok"
 
         # 8) JSON do corte

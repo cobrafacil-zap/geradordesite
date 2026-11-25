@@ -250,6 +250,78 @@ def render_caption_png(
 # Cartões genéricos (logo, banner/contador, CTA)
 # ---------------------------------------------------------------------------
 
+# paletas do título (fundo, texto) — caixa com contraste, variando por corte (inclui verde)
+_TITLE_PALETTES = [
+    ((24, 24, 27, 242), (255, 255, 255, 255)),   # caixa preta / texto branco
+    ((255, 255, 255, 244), (17, 17, 20, 255)),   # caixa branca / texto preto
+    ((34, 197, 94, 240), (255, 255, 255, 255)),  # caixa verde / texto branco
+    ((20, 83, 45, 244), (187, 247, 208, 255)),   # caixa verde escuro / texto verde claro
+    ((250, 204, 21, 244), (20, 20, 20, 255)),    # caixa amarela / texto preto
+    ((24, 24, 27, 242), (134, 239, 172, 255)),   # caixa preta / texto verde claro
+]
+
+
+def render_title(title: str, out_path: str, canvas_w: int = 1080,
+                 font_name: str = "Montserrat-Black", variant: int = 0) -> Optional[str]:
+    """Título (hook) em caixa/badge: fundo escuro/claro/verde + texto na cor inversa.
+
+    'variant' faz o estilo variar entre os cortes (preto, branco, verde…).
+    Aparece só no início do corte (como no modelo de referência).
+    """
+    title = (title or "").strip()
+    if not title:
+        return None
+    bg, fg = _TITLE_PALETTES[variant % len(_TITLE_PALETTES)]
+
+    size = max(56, canvas_w // 13)
+    font = load_font(font_name, size)
+    pad = int(size * 0.6)
+    max_w = canvas_w - 2 * pad
+    draw_tmp = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
+
+    def wrap(fnt, mw):
+        lines, cur, cur_w = [], [], 0
+        sp = int(draw_tmp.textlength(" ", font=fnt))
+        for w in title.split():
+            ww = int(draw_tmp.textlength(w, font=fnt))
+            add = ww + (sp if cur else 0)
+            if cur_w + add > mw and cur:
+                lines.append(cur); cur, cur_w = [], 0
+            cur.append(w); cur_w += add
+        if cur:
+            lines.append(cur)
+        return lines
+
+    lines = wrap(font, max_w)
+    while len(lines) > 3 and size > 32:
+        size = int(size * 0.9)
+        font = load_font(font_name, size)
+        pad = int(size * 0.6)
+        max_w = canvas_w - 2 * pad
+        lines = wrap(font, max_w)
+
+    ascent, descent = font.getmetrics()
+    line_h = int((ascent + descent) * 1.05)
+    text_w = max(int(draw_tmp.textlength(" ".join(l), font=font)) for l in lines)
+    box_w = min(text_w + 2 * pad, canvas_w)
+    box_h = len(lines) * line_h + int(pad * 1.2)
+
+    img = Image.new("RGBA", (canvas_w, box_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    x0 = (canvas_w - box_w) // 2
+    draw.rounded_rectangle([x0, 0, x0 + box_w, box_h], radius=int(size * 0.34), fill=bg)
+
+    y = int(pad * 0.6)
+    for l in lines:
+        lw = int(draw_tmp.textlength(" ".join(l), font=font))
+        x = (canvas_w - lw) // 2
+        draw.text((x, y), " ".join(l), font=font, fill=fg)
+        y += line_h
+
+    img.save(out_path)
+    return out_path
+
+
 def render_text_card(
     out_path: str,
     size: Tuple[int, int],

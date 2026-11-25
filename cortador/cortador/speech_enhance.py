@@ -15,13 +15,14 @@ import glob
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 
 
 def _run_demucs(in_wav: str, out_dir: str, model: str = "htdemucs") -> str:
     """Roda o Demucs em modo two-stems (vocals / no_vocals) e devolve a pasta do track."""
     cmd = [
-        "python3", "-m", "demucs",
+        sys.executable, "-m", "demucs",
         "--two-stems", "vocals",
         "-n", model,
         "-o", out_dir,

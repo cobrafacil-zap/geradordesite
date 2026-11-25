@@ -167,6 +167,7 @@ async def processar(
     emoji: str = Form("on"),
     barra: str = Form("on"),
     legenda: str = Form("off"),
+    ia: str = Form("on"),
 ):
     job_id = uuid.uuid4().hex[:12]
     out_dir = os.path.join(BASE_OUT, job_id)
@@ -193,6 +194,7 @@ async def processar(
                 model_size=modelo,
                 render_quality=qualidade,
                 captions=(legenda == "on"),
+                use_ai=(ia == "on"),
                 emoji=(emoji == "on"),
                 progress_bar=(barra == "on"),
                 render_video=True,
@@ -458,6 +460,7 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "<label>Jogo / nicho (opcional — deixe vazio para detectar pelo conteúdo)</label>"
         "<input type='text' name='jogo' value='' placeholder='auto-detectar (ex.: GTA, corrida, podcast)'>"
         "<label>Idioma da transcrição</label><input type='text' name='idioma' value='pt'>"
+        "<div class='chk'><input type='checkbox' name='ia' checked> 🧠 IA (DeepSeek): entende o corte, escolhe os melhores momentos e escreve títulos</div>"
         "<div class='chk'><input type='checkbox' name='legenda'> Gravar legenda no vídeo (padrão: desligado — vídeo limpo)</div>"
         "<div class='chk'><input type='checkbox' name='emoji' checked> Usar emoji (se ativar legenda)</div>"
         "<div class='chk'><input type='checkbox' name='barra' checked> Mostrar barra de progresso</div>"

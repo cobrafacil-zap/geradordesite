@@ -171,6 +171,7 @@ def render_clip(
     workdir: Optional[str] = None,
     ffmpeg: str = "ffmpeg",
     title: Optional[str] = None,
+    title_variant: int = 0,
 ) -> str:
     """Renderiza um corte completo (vídeo + áudio + legendas + overlays)."""
     cfg = cfg or RenderConfig()
@@ -194,24 +195,12 @@ def render_clip(
         cap_pngs.append(png)
         rel_events.append(CaptionEvent(s, e, ev.text, ev.words, ev.highlight_idx, ev.emoji))
 
-    # 1.5) título de abertura (hook) — PNG grande
+    # 1.5) título de abertura (hook) — badge/caixa com contraste, estilo variado
     title_png = None
     title_dur = 3.2
     if cfg.title_intro and title and title.strip():
-        from .styles import CaptionStyle
-        from .caption_engine import is_highlight
-        tstyle = CaptionStyle(
-            key="title", label="título", description="",
-            font="Anton-Regular", fontsize=max(96, out_w // 7), outline_w=6.0,
-            shadow=4.0, margin_v=0, uppercase=True, highlight_words=True,
-            highlight_color="&H0000FFFF", effect="pop",
-            max_chars_per_line=15, max_lines=3,
-        )
-        twords = title.split()
-        thl = [i for i, w in enumerate(twords) if is_highlight(w)]
-        tev = CaptionEvent(0, title_dur, title, [], thl, None)
         title_png = os.path.join(workdir, f"_titulo_{os.path.basename(out_path)}.png")
-        paint.render_caption_png(tev, tstyle, out_w, title_png)
+        paint.render_title(title, title_png, canvas_w=out_w, variant=title_variant)
 
     filt, out_w, out_h, extra_inputs, _ = build_filtergraph(
         info, cfg, rel_events, cap_pngs, duration, workdir,
