@@ -15,6 +15,7 @@ ffmpeg e estouram tempo/memória); use esta interface local ou um servidor real.
 from __future__ import annotations
 
 import os
+import json
 import shutil
 import tempfile
 import threading
