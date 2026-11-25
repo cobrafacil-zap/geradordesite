@@ -146,7 +146,8 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
                 logo=opts.logo, banner=opts.banner,
             )
             render_clip(input_path, info, w.start, w.duration, events, mp4,
-                        cfg=rcfg, workdir=work_dir, ffmpeg=opts.ffmpeg)
+                        cfg=rcfg, workdir=work_dir, ffmpeg=opts.ffmpeg,
+                        title=meta.get("title"))
             render_status = "ok"
 
         # 8) JSON do corte

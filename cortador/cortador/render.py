@@ -42,6 +42,9 @@ class RenderConfig:
     logo: Optional[str] = None
     banner: Optional[str] = None
     safe_bottom: int = 170         # respiro para a UI do TikTok/Reels/Shorts
+    audio_normalize: bool = True   # normaliza o volume (lives costumam sair baixas)
+    audio_target: str = "-14"      # LUFS alvo (padrão de streaming)
+    title_intro: bool = True       # mostra o título grande no começo do corte
     crf: int = 20
     preset: str = "veryfast"
     audio_bitrate: str = "192k"
@@ -69,6 +72,8 @@ def build_filtergraph(
     cap_pngs: List[str],
     duration: float,
     workdir: str,
+    title_png: Optional[str] = None,
+    title_duration: float = 3.2,
 ) -> Tuple[str, int, int, List[str], List[str]]:
     """Monta o filter_complex. Retorna (filtro, out_w, out_h, inputs_extra, cmd_prefix_paths)."""
     target_size = TARGET_SIZES.get(cfg.target_format, TARGET_SIZES["9:16"])
@@ -138,6 +143,19 @@ def build_filtergraph(
         cur = nxt
         n += 1
 
+    # título de abertura (hook) — grande, no início do corte, por cima de tudo
+    if title_png:
+        extra_inputs.append(title_png)
+        lbl = f"ttl{n}"
+        parts.append(f"[{len(extra_inputs)}:v]format=rgba[{lbl}]")
+        nxt = f"[v{n}]"
+        parts.append(
+            f"{cur}[{lbl}]overlay=x=(w-overlay_w)/2:y=(h-overlay_h)*0.34:"
+            f"enable='between(t,0.15,{title_duration:.2f})':eof_action=repeat{nxt}"
+        )
+        cur = nxt
+        n += 1
+
     parts.append(f"{cur}format=yuv420p[vout]")
     return ";".join(parts), out_w, out_h, extra_inputs, []
 
@@ -152,6 +170,7 @@ def render_clip(
     cfg: Optional[RenderConfig] = None,
     workdir: Optional[str] = None,
     ffmpeg: str = "ffmpeg",
+    title: Optional[str] = None,
 ) -> str:
     """Renderiza um corte completo (vídeo + áudio + legendas + overlays)."""
     cfg = cfg or RenderConfig()
@@ -175,8 +194,28 @@ def render_clip(
         cap_pngs.append(png)
         rel_events.append(CaptionEvent(s, e, ev.text, ev.words, ev.highlight_idx, ev.emoji))
 
+    # 1.5) título de abertura (hook) — PNG grande
+    title_png = None
+    title_dur = 3.2
+    if cfg.title_intro and title and title.strip():
+        from .styles import CaptionStyle
+        from .caption_engine import is_highlight
+        tstyle = CaptionStyle(
+            key="title", label="título", description="",
+            font="Anton-Regular", fontsize=max(96, out_w // 7), outline_w=6.0,
+            shadow=4.0, margin_v=0, uppercase=True, highlight_words=True,
+            highlight_color="&H0000FFFF", effect="pop",
+            max_chars_per_line=15, max_lines=3,
+        )
+        twords = title.split()
+        thl = [i for i, w in enumerate(twords) if is_highlight(w)]
+        tev = CaptionEvent(0, title_dur, title, [], thl, None)
+        title_png = os.path.join(workdir, f"_titulo_{os.path.basename(out_path)}.png")
+        paint.render_caption_png(tev, tstyle, out_w, title_png)
+
     filt, out_w, out_h, extra_inputs, _ = build_filtergraph(
-        info, cfg, rel_events, cap_pngs, duration, workdir
+        info, cfg, rel_events, cap_pngs, duration, workdir,
+        title_png=title_png, title_duration=title_dur,
     )
 
     cmd = [ffmpeg, "-y", "-v", "error", "-ss", f"{start:.3f}", "-t", f"{duration:.3f}", "-i", src]
@@ -193,6 +232,9 @@ def render_clip(
     if cfg.fps:
         cmd += ["-r", str(cfg.fps)]
     if info.has_audio:
+        if cfg.audio_normalize:
+            # deixa o volume no padrão de streaming (lives gravam muito baixo)
+            cmd += ["-af", f"loudnorm=I={cfg.audio_target}:TP=-1.5:LRA=11,alimiter=limit=0.95"]
         cmd += ["-c:a", "aac", "-b:a", cfg.audio_bitrate]
     cmd += [out_path]
 
@@ -202,6 +244,11 @@ def render_clip(
     for png in cap_pngs:
         try:
             os.remove(png)
+        except OSError:
+            pass
+    if title_png and os.path.exists(title_png):
+        try:
+            os.remove(title_png)
         except OSError:
             pass
 
