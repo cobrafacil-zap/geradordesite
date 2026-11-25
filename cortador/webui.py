@@ -19,7 +19,7 @@ import shutil
 import tempfile
 import threading
 import uuid
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
@@ -95,15 +95,62 @@ def trabalhos():
         for j in jobs:
             status = "⏳ processando" if j["status"] == "processando" else f"🎬 {j['clips']} corte(s)"
             rows.append(f"""
-            <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:14px">
-              <div>
+            <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+              <div style="flex:1;min-width:200px">
                 <h3 style="margin:0 0 4px">{j['title']}</h3>
                 <div class="meta">#{j['id']} · {j['date']} · {status}</div>
               </div>
-              <a class="dl" href="/job/{j['id']}">Abrir →</a>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <a class="dl" href="/job/{j['id']}">Abrir →</a>
+                <a class="dl ghost" href="/excluir-outros/{j['id']}" onclick="return confirm('Apagar os OUTROS trabalhos e deixar só este?')" title="Deixar só este">⭐ Só este</a>
+                <a class="dl ghost" href="/excluir/{j['id']}" onclick="return confirm('Excluir este trabalho?')" title="Excluir">🗑️</a>
+              </div>
             </div>""")
-        body = "\n".join(rows) + "<p style='margin-top:18px'><a class='dl ghost' href='/'>← Novo trabalho</a></p>"
+        top = "<p><a class='dl ghost' href='/limpar' onclick=\"return confirm('Apagar TODOS os trabalhos?')\">🗑️ Limpar todos os trabalhos</a></p>"
+        body = top + "\n".join(rows) + "<p style='margin-top:18px'><a class='dl ghost' href='/'>← Novo trabalho</a></p>"
     return JOBS_PAGE.replace("__JOBS__", body).replace("__N__", str(len(jobs)))
+
+
+def _safe_job_dir(job_id: str) -> Optional[str]:
+    d = os.path.abspath(os.path.join(BASE_OUT, job_id))
+    if os.path.isdir(d) and d.startswith(os.path.abspath(BASE_OUT) + os.sep):
+        return d
+    return None
+
+
+@app.get("/excluir/{job_id}")
+def excluir(job_id: str):
+    """Exclui um trabalho (pasta com os cortes)."""
+    d = _safe_job_dir(job_id)
+    if d:
+        shutil.rmtree(d, ignore_errors=True)
+    return RedirectResponse(url="/trabalhos", status_code=303)
+
+
+@app.get("/excluir-outros/{job_id}")
+def excluir_outros(job_id: str):
+    """Mantém só o trabalho indicado e apaga todos os outros."""
+    base = os.path.abspath(BASE_OUT)
+    if os.path.isdir(BASE_OUT):
+        for name in os.listdir(BASE_OUT):
+            if name == job_id:
+                continue
+            d = os.path.join(BASE_OUT, name)
+            if os.path.isdir(d) and os.path.abspath(d).startswith(base + os.sep):
+                shutil.rmtree(d, ignore_errors=True)
+    return RedirectResponse(url=f"/job/{job_id}", status_code=303)
+
+
+@app.get("/limpar")
+def limpar():
+    """Apaga todos os trabalhos."""
+    base = os.path.abspath(BASE_OUT)
+    if os.path.isdir(BASE_OUT):
+        for name in os.listdir(BASE_OUT):
+            d = os.path.join(BASE_OUT, name)
+            if os.path.isdir(d) and os.path.abspath(d).startswith(base + os.sep):
+                shutil.rmtree(d, ignore_errors=True)
+    return RedirectResponse(url="/trabalhos", status_code=303)
 
 
 @app.post("/processar")

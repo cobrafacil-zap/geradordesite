@@ -179,7 +179,7 @@ def render_clip(
         info, cfg, rel_events, cap_pngs, duration, workdir
     )
 
-    cmd = [ffmpeg, "-y", "-v", "error", "-ss", f"{start:.3f}", "-i", src, "-t", f"{duration:.3f}"]
+    cmd = [ffmpeg, "-y", "-v", "error", "-ss", f"{start:.3f}", "-t", f"{duration:.3f}", "-i", src]
     for img in extra_inputs:
         cmd += ["-loop", "1", "-t", f"{duration:.3f}", "-i", img]
 
