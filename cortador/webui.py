@@ -52,6 +52,60 @@ def home():
     return PAGE.replace("__STYLE_OPTIONS__", opts)
 
 
+def _list_jobs():
+    """Lista os trabalhos já processados (lidos do disco)."""
+    import datetime
+    jobs = []
+    if not os.path.isdir(BASE_OUT):
+        return jobs
+    for name in sorted(os.listdir(BASE_OUT)):
+        d = os.path.join(BASE_OUT, name)
+        if not os.path.isdir(d):
+            continue
+        entry = {"id": name, "title": "", "clips": 0, "date": "", "status": "pronto", "cover": ""}
+        try:
+            entry["date"] = datetime.datetime.fromtimestamp(os.path.getmtime(d)).strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            pass
+        report_path = os.path.join(d, "report.json")
+        if os.path.exists(report_path):
+            try:
+                with open(report_path, "r", encoding="utf-8") as f:
+                    rep = json.load(f)
+                clips = rep.get("clips", [])
+                entry["clips"] = len(clips)
+                entry["title"] = (clips[0].get("metadata", {}).get("title") if clips else "") or f"{len(clips)} corte(s)"
+            except Exception:
+                entry["title"] = "—"
+        else:
+            entry["status"] = "processando"
+            entry["title"] = "Processando…"
+        jobs.append(entry)
+    jobs.sort(key=lambda x: x["date"], reverse=True)
+    return jobs
+
+
+@app.get("/trabalhos", response_class=HTMLResponse)
+def trabalhos():
+    jobs = _list_jobs()
+    if not jobs:
+        body = "<p class='lead'>Nenhum trabalho ainda. <a class='dl' href='/'>← Fazer o primeiro</a></p>"
+    else:
+        rows = []
+        for j in jobs:
+            status = "⏳ processando" if j["status"] == "processando" else f"🎬 {j['clips']} corte(s)"
+            rows.append(f"""
+            <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:14px">
+              <div>
+                <h3 style="margin:0 0 4px">{j['title']}</h3>
+                <div class="meta">#{j['id']} · {j['date']} · {status}</div>
+              </div>
+              <a class="dl" href="/job/{j['id']}">Abrir →</a>
+            </div>""")
+        body = "\n".join(rows) + "<p style='margin-top:18px'><a class='dl ghost' href='/'>← Novo trabalho</a></p>"
+    return JOBS_PAGE.replace("__JOBS__", body).replace("__N__", str(len(jobs)))
+
+
 @app.post("/processar")
 async def processar(
     video: UploadFile = File(...),
@@ -109,29 +163,43 @@ async def processar(
 
 @app.get("/job/{job_id}", response_class=HTMLResponse)
 def job_page(job_id: str):
+    out_dir = os.path.join(BASE_OUT, job_id)
+    report_path = os.path.join(out_dir, "report.json")
+
+    # 1) Se já existe o relatório no disco → resultado pronto (sobrevive a restart).
+    if os.path.exists(report_path):
+        try:
+            with open(report_path, "r", encoding="utf-8") as f:
+                report = json.load(f)
+        except Exception:
+            report = {"clips": []}
+        return _render_results(job_id, out_dir, report)
+
+    # 2) Senão, procura o estado em memória (processando/erro).
     with JOBS_LOCK:
         job = JOBS.get(job_id)
     if not job:
+        # 3) Último recurso: pasta existe mas ainda sem relatório → ainda processando
+        if os.path.isdir(out_dir):
+            return PROCESSING.replace("__ID__", job_id).replace("__LOG__", "Processando… (aguarde)")
         return HTMLResponse("<h3>Job não encontrado.</h3>", status_code=404)
 
     if job["status"] == "processando":
         log_html = "<br>".join(job["log"][-12:]) or "Iniciando…"
-        return (
-            PROCESSING.replace("__ID__", job_id).replace("__LOG__", log_html)
-        )
+        return PROCESSING.replace("__ID__", job_id).replace("__LOG__", log_html)
 
     if job["status"] == "erro":
         return HTMLResponse(f"<h3>Erro no processamento</h3><pre>{job['log'][-1]}</pre>")
 
-    # pronto: monta resultados
-    report = job["report"] or {"clips": []}
-    out_dir = job["out_dir"]
+    return _render_results(job_id, job["out_dir"], job.get("report") or {"clips": []})
+
+
+def _render_results(job_id: str, out_dir: str, report: dict) -> str:
     cards = []
     for c in report.get("clips", []):
         m = c.get("metadata", {})
         v = c.get("virality", {})
         fname = c.get("file")
-        base = os.path.splitext(fname)[0] if fname else ""
         links = []
         if fname:
             links.append(f'<a class="dl" href="/saida/{job_id}/cortes/{fname}">⬇ MP4</a>')
@@ -139,9 +207,10 @@ def job_page(job_id: str):
             sub = (c.get("subtitles") or {}).get(key)
             if sub:
                 links.append(f'<a class="dl ghost" href="/saida/{job_id}/cortes/{sub}">{key.upper()}</a>')
+        dur = c.get("duration")
         cards.append(f"""
         <div class="card">
-          <div class="vtag">{v.get('label','')} · <b>{v.get('total','')}</b>/100</div>
+          <div class="vtag">{v.get('label','')} · <b>{v.get('total','')}</b>/100{f' · {dur:.0f}s' if dur else ''}</div>
           <h3>{m.get('title','(sem título)')}</h3>
           <div class="meta">{m.get('hashtags_str','')}</div>
           <div class="desc">{(m.get('description','') or '').splitlines()[0] if m.get('description') else ''}</div>
@@ -197,6 +266,7 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         "<title>Cortador de Vídeos com Legenda</title><style>" + _CSS + "</style></head><body><div class='wrap'>"
         "<h1>🎬 Cortador de Vídeos com Legenda</h1>"
+        "<p style='text-align:right;margin:-10px 0 0'><a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a></p>"
         "<p class='lead'>Suba a live, escolha as opções e receba os melhores cortes (1–3 min) "
         "com legenda profissional, título, hashtags e score de viralidade. "
         "<b>100% privado:</b> o vídeo é processado aqui, nada é enviado para fora.</p>"
@@ -247,8 +317,18 @@ RESULT = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
           "<h1>✅ Cortes prontos!</h1>"
           "<p class='lead'>Baixe os vídeos legendados, as legendas (.srt/.ass) e o relatório.</p>"
           "__CARDS__"
-          "<p style='margin-top:20px'>__REPORT__ &nbsp; <a class='dl ghost' href='/'>← Cortar outro vídeo</a></p>"
+          "<p style='margin-top:20px'>__REPORT__ &nbsp; <a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a> &nbsp; <a class='dl ghost' href='/'>← Cortar outro vídeo</a></p>"
           "</div></body></html>")
+
+
+JOBS_PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
+             "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+             "<title>Meus trabalhos</title><style>" + _CSS + "</style></head><body><div class='wrap'>"
+             "<h1>📁 Meus trabalhos</h1>"
+             "<p class='lead'>__N__ trabalho(s) guardado(s). Clique em <b>Abrir</b> para ver os cortes, "
+             "baixar os vídeos e as legendas.</p>"
+             "__JOBS__"
+             "</div></body></html>")
 
 
 if __name__ == "__main__":
