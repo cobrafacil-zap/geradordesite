@@ -420,6 +420,13 @@ pre{background:#070a12;border:1px solid var(--line);border-radius:12px;padding:1
 .vbox{position:relative;width:min(92vw,420px)}
 .vbox video{width:100%;max-height:82vh;border-radius:16px;background:#000;display:block;box-shadow:0 30px 80px rgba(0,0,0,.6)}
 .vclose{position:absolute;top:-46px;right:0;width:38px;height:38px;border-radius:50%;border:0;background:#fff;color:#000;font-size:19px;cursor:pointer;font-weight:700}
+
+/* ===== Loading (feedback imediato ao processar) ===== */
+.loading{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;align-items:center;justify-content:center;padding:20px}
+.lbox{text-align:center;color:#fff;max-width:340px}
+.lspin{width:58px;height:58px;border:5px solid rgba(255,255,255,.22);border-top-color:#ff2d6f;border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 22px}
+.lbox h3{margin:0 0 10px;font-size:22px}
+.lbox p{color:#c7cfe0;font-size:15px;line-height:1.7}
 """
 
 PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
@@ -430,7 +437,7 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "<p class='lead'>Suba a live, escolha as opções e receba os melhores cortes (1–3 min) "
         "com legenda profissional, título, hashtags e score de viralidade. "
         "<b>100% privado:</b> o vídeo é processado aqui, nada é enviado para fora.</p>"
-        "<form class='form' action='/processar' method='post' enctype='multipart/form-data'>"
+        "<form class='form' action='/processar' method='post' enctype='multipart/form-data' onsubmit='startProcess()'>"
         "<label>Vídeo / Live (mp4, mov…)</label>"
         "<input type='file' name='video' accept='video/*' required>"
         "<div class='row'>"
@@ -468,7 +475,21 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "</form>"
         "<p class='lead' style='margin-top:22px;font-size:13px'>O processamento pode levar alguns minutos em lives longas "
         "(transcrição + renderização).</p>"
-        "</div></body></html>")
+        "</div>"
+        "<div id='loading' class='loading'>"
+        "<div class='lbox'>"
+        "<div class='lspin'></div>"
+        "<h3>Processando seu vídeo…</h3>"
+        "<p>Enviando e analisando. Isso pode levar alguns minutos.<br><b>Não feche esta página.</b></p>"
+        "</div></div>"
+        "<script>"
+        "function startProcess(){"
+        "var l=document.getElementById('loading');if(l)l.style.display='flex';"
+        "var b=document.querySelector('button[type=submit]');"
+        "if(b){b.disabled=true;b.textContent='⏳ Processando…';}"
+        "}"
+        "</script>"
+        "</body></html>")
 
 PROCESSING = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
               "<meta name='viewport' content='width=device-width, initial-scale=1'>"
