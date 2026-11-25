@@ -10,6 +10,7 @@ from dataclasses import dataclass, field, asdict
 from typing import List, Optional
 
 from . import analysis, caption_engine, glossary, metadata, paint, virality
+from . import speech_enhance
 from .captions import write_subtitles
 from .probe import probe, MediaInfo, TARGET_SIZES
 from .render import RenderConfig, render_clip
@@ -37,6 +38,7 @@ class PipelineOptions:
     model_size: str = "small"
     engine: str = "faster"            # faster | mlx
     render_quality: str = "alta"      # normal | alta | maxima
+    speech_enhance: bool = True       # isola a voz do jogo (Speech Enhancer) p/ transcrever certo
     render_video: bool = True
     ffmpeg: str = "ffmpeg"
 
@@ -95,10 +97,19 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
     for i, w in enumerate(wins, 1):
         log(f"\n🎬 Corte {i}/{len(wins)}  [{w.start:.0f}s → {w.end:.0f}s]  ({w.duration:.0f}s)")
 
-        # 1) transcreve o trecho
+        # 1) transcreve o trecho (com Speech Enhancer: voz isolada do barulho do jogo)
         wav = os.path.join(work_dir, f"win_{i}.wav")
         _extract_audio_range(input_path, w.start, w.end, wav)
-        tr = transcribe(wav, engine=opts.engine, model_size=opts.model_size, language=opts.language)
+        twav = wav
+        if opts.speech_enhance:
+            voz = os.path.join(work_dir, f"win_{i}_voz.wav")
+            try:
+                log("   • Speech Enhancer: isolando a voz do jogo…")
+                speech_enhance.isolate_vocals(wav, voz)
+                twav = voz
+            except Exception as e:
+                log(f"   • Speech Enhancer pulado: {e}")
+        tr = transcribe(twav, engine=opts.engine, model_size=opts.model_size, language=opts.language)
         # reajusta timestamps para o tempo absoluto da live
         for seg in tr.segments:
             seg.start += w.start
@@ -106,10 +117,11 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
             for wd in seg.words:
                 wd.start += w.start
                 wd.end += w.start
-        try:
-            os.remove(wav)
-        except OSError:
-            pass
+        for _f in {wav, twav}:
+            try:
+                os.remove(_f)
+            except OSError:
+                pass
 
         # context grounding: corrige nomes/térmicos do nicho (ex.: "GTA RP", "Skyline")
         for seg in tr.segments:

@@ -41,14 +41,18 @@ def _run_demucs(in_wav: str, out_dir: str, model: str = "htdemucs") -> str:
 
 
 def isolate_vocals(in_wav: str, out_wav: str, model: str = "htdemucs") -> str:
-    """Devolve apenas a voz (vocals) — ideal para transcrever com precisão."""
+    """Devolve apenas a voz (vocals), já normalizada — ideal para transcrever com precisão."""
+    import subprocess as sp
     tmp = tempfile.mkdtemp(prefix="demucs_")
     try:
         track_dir = _run_demucs(in_wav, tmp, model)
         vocals = os.path.join(track_dir, "vocals.wav")
         if not os.path.exists(vocals):
             raise RuntimeError("vocals.wav não encontrado no output do Demucs.")
-        shutil.copyfile(vocals, out_wav)
+        # normaliza a voz (Demucs devolve baixa) para o Whisper acertar
+        sp.run(["ffmpeg", "-y", "-v", "error", "-i", vocals,
+                "-af", "loudnorm=I=-16:TP=-1.5:LRA=11,alimiter=limit=0.95",
+                out_wav], check=True)
         return out_wav
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
