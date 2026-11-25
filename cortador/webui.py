@@ -55,10 +55,11 @@ def home():
 @app.post("/processar")
 async def processar(
     video: UploadFile = File(...),
-    n_cortes: int = Form(5),
+    n_cortes: int = Form(4),
     formato: str = Form("9:16"),
     estilo: str = Form("gaming_bold"),
-    jogo: str = Form("GTA RP"),
+    modelo: str = Form("base"),
+    jogo: str = Form(""),
     idioma: str = Form("pt"),
     emoji: str = Form("on"),
     barra: str = Form("on"),
@@ -83,8 +84,9 @@ async def processar(
                 count=int(n_cortes),
                 target_format=formato,
                 style=estilo,
-                game=jogo,
+                game=(jogo.strip() or None),
                 language=idioma,
+                model_size=modelo,
                 emoji=(emoji == "on"),
                 progress_bar=(barra == "on"),
                 render_video=True,
@@ -202,7 +204,7 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "<label>Vídeo / Live (mp4, mov…)</label>"
         "<input type='file' name='video' accept='video/*' required>"
         "<div class='row'>"
-        "<div><label>Nº de cortes</label><input type='number' name='n_cortes' value='5' min='1' max='20'></div>"
+        "<div><label>Nº de cortes</label><input type='number' name='n_cortes' value='4' min='1' max='20'></div>"
         "<div><label>Formato de saída</label><select name='formato'>"
         "<option value='auto'>Auto (detectar)</option><option value='9:16' selected>9:16 (vertical)</option>"
         "<option value='16:9'>16:9 (horizontal)</option><option value='1:1'>1:1</option><option value='4:5'>4:5</option>"
@@ -210,8 +212,15 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "</div>"
         "<div class='row'>"
         "<div><label>Modelo de legenda</label><select name='estilo'>__STYLE_OPTIONS__</select></div>"
-        "<div><label>Jogo / nicho (para os títulos)</label><input type='text' name='jogo' value='GTA RP'></div>"
+        "<div><label>Velocidade × qualidade</label><select name='modelo'>"
+        "<option value='base' selected>Rápido (base)</option>"
+        "<option value='small'>Equilibrado (small)</option>"
+        "<option value='medium'>Mais preciso (medium, lento)</option>"
+        "<option value='tiny'>Turbo (tiny, menos preciso)</option>"
+        "</select></div>"
         "</div>"
+        "<label>Jogo / nicho (opcional — deixe vazio para detectar pelo conteúdo)</label>"
+        "<input type='text' name='jogo' value='' placeholder='auto-detectar (ex.: GTA, corrida, podcast)'>"
         "<label>Idioma da transcrição</label><input type='text' name='idioma' value='pt'>"
         "<div class='chk'><input type='checkbox' name='emoji' checked> Usar emoji nas legendas</div>"
         "<div class='chk'><input type='checkbox' name='barra' checked> Mostrar barra de progresso</div>"

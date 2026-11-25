@@ -129,72 +129,118 @@ def _clean_phrase(text: str, max_words: int = 9) -> str:
     return " ".join(words[:max_words]).strip(".,!?;:")
 
 
-def make_titles(text: str, category: str = "geral", game: str = "GTA RP") -> List[str]:
-    cfg = _CATEGORIES.get(category, _CATEGORIES["geral"])
-    event = detect_event(text) or cfg["names"][0]
-    kws = extract_keywords(text, 6)
-    kw = kws[0].capitalize() if kws else ""
-    subject = _clean_phrase(text, 6).rstrip(".")
-    ev = event.lower()
+_ACTION = set("""fugiu fuga fugir roubou roubo assalto assalta pegou conseguiu ganhou perdeu
+morreu matou venceu explodiu capotou bateu correu invadiu prendeu escapou transformou vira virou
+aconteceu descobriu encontrou achou abriu fez diz falou gritou caiu subiu desceu prendeu salvou
+perseguiu despistou escondeu apareceu surpreendeu deixou virou passou parou começou terminou""".split())
 
+_EMOTION = set("""epico epica insano insana absurdo surreal louco louca incrivel impossivel
+chocante surpreendeu caos drama perigo inacreditavel mais-perto pegou-prendeu cinco-estrelas
+inacreditavel""".split())
+
+
+def _best_phrase(text: str) -> str:
+    """Escolhe a cláusula do corte que melhor resume o que acontece (frase natural)."""
+    parts = re.split(r"[.!?\n…;]+|,\s*", text)
+    best, best_sc = None, -1.0
+    for p in parts:
+        p = re.sub(r"\s+", " ", p).strip()
+        toks = _tokens(p)
+        n = len(toks)
+        if n < 4 or n > 18:
+            continue
+        sc = 0.0
+        sc += sum(2 for t in toks if t in _ACTION)
+        sc += sum(2 for t in toks if t in _EMOTION)
+        sc += sum(1 for t in toks if t not in _STOPWORDS and t not in _FILLER and len(t) >= 5)
+        sc += max(0.0, 3.0 - abs(n - 10) / 3.0)
+        if sc > best_sc:
+            best_sc, best = sc, p
+    return best or re.sub(r"\s+", " ", text).strip()
+
+
+def _headline(s: str) -> str:
+    s = re.sub(r"\s+", " ", s).strip(" .,!?;:")
+    return (s[0].upper() + s[1:]) if s else s
+
+
+def make_titles(text: str, category: str = "geral", game: Optional[str] = None) -> List[str]:
+    """Títulos gerados a partir do CONTEÚDO real do corte (fazem sentido com a legenda)."""
+    phrase = _headline(_best_phrase(text))
+    if not phrase:
+        phrase = _headline(re.sub(r"\s+", " ", text).strip()[:70])
+    ev = detect_event(text)
+    g = (game or "").strip()
+
+    excl = "" if phrase.endswith(("!", "?", "…")) else ""
     titles = [
-        f"Ninguém esperava esse {ev} em {game} 😱",
-        f"O {ev} que quase deu tudo errado…",
-        f"{event} Épico em {game} — o final vai te chocar",
-        f"Não acreditei no que aconteceu nesse {ev}",
-        f"E se o {ev} desse errado? Olha o resultado",
-        f"A fuga mais insana de {game} termina em {ev}",
-        f"Todo mundo achava impossível… até esse {ev}",
-        f"{event} em {game} do jeito que você nunca viu 🔥",
-        f"Como sobrevivemos a esse {ev} (5 estrelas!)",
-        f"{event}: a cena mais louca da live",
+        f"{phrase}{excl}",                              # principal: o que acontece no corte
+        f"{phrase} — e o final surpreendeu",
     ]
-    if kw and kw.lower() not in event.lower():
-        titles.insert(1, f"{kw}: o momento mais insano de {game}")
-    if subject:
-        titles.append(f"{subject[:40]} — clipe épico de {game}")
+    if ev and ev.lower() not in phrase.lower():
+        titles.append(f"{ev}: {phrase}")
+    titles.append(f"Olha o que aconteceu: {phrase}")
+    if g:
+        titles.append(f"{phrase} ({g})")
+    titles.append(f"{phrase} #shorts")
     return titles
 
 
-def make_description(text: str, category: str, title: str, game: str = "GTA RP") -> str:
+def make_description(text: str, category: str, title: str, game: Optional[str] = None) -> str:
     hook = _clean_phrase(text, 12)
+    g = (game or "").strip()
+    where = f"Trecho da live de {g}." if g else "Trecho da live."
     cta = "Segue pra ver mais cortes assim! 🚀"
     return (
         f"{title}\n\n"
         f"{'🔥 ' if hook else ''}{hook}…\n\n"
-        f"Trecho da live de {game}. Corte gerado automaticamente com legenda profissional.\n\n"
+        f"{where} Corte gerado automaticamente com legenda profissional.\n\n"
         f"{cta}\n"
-        f"#gta #gtarp #gaming"
     )
 
 
 def make_hashtags(text: str, category: str, extra: Optional[List[str]] = None) -> List[str]:
-    cfg = _CATEGORIES.get(category, _CATEGORIES["geral"])
-    kws = extract_keywords(text, 5)
+    t = _strip(text).lower()
     tags: List[str] = []
-    # nicho primeiro (mais específicas), depois amplas
-    for kw in kws:
+
+    # palavras do conteúdo primeiro (específicas do corte)
+    for kw in extract_keywords(text, 5):
         tag = "#" + re.sub(r"[^a-z0-9]", "", _strip(kw).lower())
         if len(tag) > 3 and tag not in tags:
             tags.append(tag)
-    for t in cfg["tags"]:
-        if t not in tags:
-            tags.append(t)
-    for t in _TREND_TAGS:
-        if t not in tags:
-            tags.append(t)
+
+    # nicho: só adiciona tags específicas se o conteúdo realmente for daquele tema
+    if "gta" in t or "grand theft" in t:
+        for x in ("#gta", "#gtarp", "#gaming"):
+            if x not in tags:
+                tags.append(x)
+    if any(w in t for w in ("carro", "corrida", "drift", "motor", "capot")):
+        for x in ("#carros", "#corrida", "#automotivo"):
+            if x not in tags:
+                tags.append(x)
+    if any(w in t for w in ("podcast", "entrevista", "conversa")):
+        for x in ("#podcast", "#entrevista"):
+            if x not in tags:
+                tags.append(x)
+
+    # amplas/trending por último
+    for x in ("#brasil", "viral") + tuple(_TREND_TAGS):
+        x = x if x.startswith("#") else "#" + x
+        if x not in tags:
+            tags.append(x)
+
     if extra:
-        for t in extra:
-            tt = t if t.startswith("#") else "#" + t
-            if tt not in tags:
-                tags.append(tt)
-    return tags[:16]
+        for x in extra:
+            xx = x if x.startswith("#") else "#" + x
+            if xx not in tags:
+                tags.append(xx)
+    return tags[:15]
 
 
 def generate_metadata(
     text: str,
     category: Optional[str] = None,
-    game: str = "GTA RP",
+    game: Optional[str] = None,
     virality_label: str = "",
     virality_total: float = 0.0,
 ) -> Dict:
