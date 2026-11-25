@@ -126,6 +126,16 @@ def _transcribe_mlx(audio_path: str, model_size: str, language: str) -> Transcri
     )
 
 
+def _norm_lang(lang: str) -> str:
+    """Normaliza o código de idioma (o Whisper não aceita 'pt-br', só 'pt')."""
+    if not lang:
+        return ""
+    lang = str(lang).strip().lower().replace("_", "-")
+    if "-" in lang:
+        lang = lang.split("-")[0]  # "pt-br" -> "pt", "en-us" -> "en"
+    return lang
+
+
 def transcribe(
     audio_path: str,
     engine: str = "faster",
@@ -134,6 +144,7 @@ def transcribe(
     beam_size: int = 5,
 ) -> Transcript:
     """Transcreve um arquivo de áudio/vídeo e devolve segmentos com palavras."""
+    language = _norm_lang(language)
     if engine == "mlx":
         try:
             return _transcribe_mlx(audio_path, model_size, language)
