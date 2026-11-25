@@ -39,6 +39,8 @@ class PipelineOptions:
     engine: str = "faster"            # faster | mlx
     render_quality: str = "alta"      # normal | alta | maxima
     speech_enhance: bool = True       # isola a voz do jogo (Speech Enhancer) p/ transcrever certo
+    captions: bool = False            # legenda gravada no vídeo (padrão: não — vídeo limpo)
+    title_intro: bool = True          # título (hook) grande no início do corte
     render_video: bool = True
     ffmpeg: str = "ffmpeg"
 
@@ -170,9 +172,10 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
                 logo=opts.logo, banner=opts.banner,
                 crf=qp["crf"], preset=qp["preset"],
             )
-            render_clip(input_path, info, w.start, w.duration, events, mp4,
+            render_clip(input_path, info, w.start, w.duration,
+                        (events if opts.captions else []), mp4,
                         cfg=rcfg, workdir=work_dir, ffmpeg=opts.ffmpeg,
-                        title=meta.get("title"))
+                        title=(meta.get("title") if opts.title_intro else None))
             render_status = "ok"
 
         # 8) JSON do corte

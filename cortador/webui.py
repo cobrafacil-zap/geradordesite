@@ -166,6 +166,7 @@ async def processar(
     idioma: str = Form("pt"),
     emoji: str = Form("on"),
     barra: str = Form("on"),
+    legenda: str = Form("off"),
 ):
     job_id = uuid.uuid4().hex[:12]
     out_dir = os.path.join(BASE_OUT, job_id)
@@ -191,6 +192,7 @@ async def processar(
                 language=idioma,
                 model_size=modelo,
                 render_quality=qualidade,
+                captions=(legenda == "on"),
                 emoji=(emoji == "on"),
                 progress_bar=(barra == "on"),
                 render_video=True,
@@ -286,7 +288,7 @@ def _render_results(job_id: str, out_dir: str, report: dict) -> str:
         cards.append(f"""
         <div class="clip">
           <div class="clip-head"><input type="checkbox"><div class="clip-title">#{i} {title}</div></div>
-          <div class="thumbwrap">
+          <div class="thumbwrap" onclick="playVid('/saida/{job_id}/cortes/{fname}')" style="cursor:pointer">
             <img src="/thumb/{job_id}/{fname}" loading="lazy" onerror="this.style.display='none'">
             <div class="play"><span>▶</span></div>
             <div class="timerange">{_fmt_time(start)} - {_fmt_time(end)}</div>
@@ -410,6 +412,12 @@ pre{background:#070a12;border:1px solid var(--line);border-radius:12px;padding:1
 .qrow .t{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .qrow .ok{color:#2ee6a8}
 @media(max-width:640px){.grid{grid-template-columns:1fr}.queue{position:static;width:auto;margin-top:16px}}
+
+/* ===== Player de vídeo (modal) ===== */
+.vmodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;align-items:center;justify-content:center;padding:20px}
+.vbox{position:relative;width:min(92vw,420px)}
+.vbox video{width:100%;max-height:82vh;border-radius:16px;background:#000;display:block;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.vclose{position:absolute;top:-46px;right:0;width:38px;height:38px;border-radius:50%;border:0;background:#fff;color:#000;font-size:19px;cursor:pointer;font-weight:700}
 """
 
 PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
@@ -450,7 +458,8 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "<label>Jogo / nicho (opcional — deixe vazio para detectar pelo conteúdo)</label>"
         "<input type='text' name='jogo' value='' placeholder='auto-detectar (ex.: GTA, corrida, podcast)'>"
         "<label>Idioma da transcrição</label><input type='text' name='idioma' value='pt'>"
-        "<div class='chk'><input type='checkbox' name='emoji' checked> Usar emoji nas legendas</div>"
+        "<div class='chk'><input type='checkbox' name='legenda'> Gravar legenda no vídeo (padrão: desligado — vídeo limpo)</div>"
+        "<div class='chk'><input type='checkbox' name='emoji' checked> Usar emoji (se ativar legenda)</div>"
         "<div class='chk'><input type='checkbox' name='barra' checked> Mostrar barra de progresso</div>"
         "<button class='btn' type='submit'>▶ Processar vídeo</button>"
         "</form>"
@@ -476,7 +485,20 @@ RESULT = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
           "__TOPBAR__"
           "<div class='grid'>__CARDS__</div>"
           "<p style='margin:26px 0 60px'>__REPORT__ &nbsp; <a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a> &nbsp; <a class='dl ghost' href='/'>← Cortar outro vídeo</a></p>"
-          "</div>__QUEUE__</body></html>")
+          "</div>__QUEUE__"
+          "<div id='vmodal' class='vmodal'><div class='vbox'>"
+          "<button class='vclose' onclick='closeVid()' title='Fechar'>✕</button>"
+          "<video id='vplayer' controls autoplay playsinline></video>"
+          "</div></div>"
+          "<script>"
+          "function playVid(u){var v=document.getElementById('vplayer');v.src=u;"
+          "document.getElementById('vmodal').style.display='flex';v.play();}"
+          "function closeVid(){var v=document.getElementById('vplayer');v.pause();v.src='';"
+          "document.getElementById('vmodal').style.display='none';}"
+          "var m=document.getElementById('vmodal');"
+          "m.addEventListener('click',function(e){if(e.target===this)closeVid();});"
+          "document.addEventListener('keydown',function(e){if(e.key==='Escape')closeVid();});"
+          "</script></body></html>")
 
 
 JOBS_PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
