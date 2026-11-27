@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 from .caption_engine import CaptionEvent
+from .ffbin import FFMPEG, FFPROBE
 from .probe import MediaInfo, build_reframe_filter, TARGET_SIZES
 from .styles import CaptionStyle, get_style
 from . import paint
@@ -47,7 +48,7 @@ class RenderConfig:
     title_intro: bool = True       # mostra o título grande no começo do corte
     outro: bool = True             # cartão de final (com transição) ao fim do corte
     outro_img: Optional[str] = None  # imagem do final (senão gera um cartão automático)
-    outro_dur: float = 2.6         # duração do cartão de final
+    outro_dur: float = 3.0         # duração do fechamento (imagem final)
     crf: int = 17                  # qualidade alta (menor = melhor; 17 ≈ quase sem perda)
     preset: str = "medium"         # codificação mais eficiente (melhor qualidade)
     audio_bitrate: str = "256k"    # áudio com mais fidelidade
@@ -59,7 +60,7 @@ def _esc_filter_path(p: str) -> str:
     return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
 
-def _has_libass(ffmpeg: str = "ffmpeg") -> bool:
+def _has_libass(ffmpeg: str = FFMPEG) -> bool:
     try:
         out = subprocess.run([ffmpeg, "-hide_banner", "-filters"],
                              capture_output=True, text=True).stdout
@@ -163,29 +164,66 @@ def build_filtergraph(
     return ";".join(parts), out_w, out_h, extra_inputs, []
 
 
+def _probe_video(path: str) -> tuple:
+    """(largura, altura, fps, duração) de um vídeo, via ffprobe."""
+    out = subprocess.run(
+        [FFPROBE, "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=width,height,r_frame_rate:format=duration",
+         "-of", "default=noprint_wrappers=1", path],
+        capture_output=True, text=True, check=True).stdout
+    vals = {}
+    for line in out.splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            vals[k.strip()] = v.strip()
+    w = int(vals.get("width") or 1080)
+    h = int(vals.get("height") or 1920)
+    fps = 30.0
+    r = vals.get("r_frame_rate") or "30/1"
+    try:
+        num, den = r.split("/")
+        fps = float(num) / float(den or 1)
+    except Exception:
+        pass
+    dur = float(vals.get("duration") or 0.0)
+    return w, h, fps, dur
+
+
 def _append_outro(main_mp4: str, outro_img: str, out_w: int, out_h: int,
-                  duration: float = 2.6, workdir: str = ".", ffmpeg: str = "ffmpeg"):
-    """Anexa o cartão de final ao fim do vídeo, com transição (fade-in da preto)."""
+                  duration: float = 3.0, workdir: str = ".", ffmpeg: str = FFMPEG,
+                  crf: int = 14, preset: str = "slow", xfade: float = 0.6):
+    """Anexa a imagem de fechamento ao fim do vídeo com TRANSIÇÃO (crossfade)."""
+    _, _, fps, main_dur = _probe_video(main_mp4)
+    if main_dur <= 0:
+        return
+    xf = min(xfade, max(0.2, main_dur / 4), max(0.2, duration / 2))
+    total = main_dur + duration - xf
     outro_seg = os.path.join(workdir, "_outro_seg.mp4")
-    # imagem -> segmento (fade-in), com áudio silencioso para poder concatenar
+    # imagem -> segmento de vídeo (sem áudio; o áudio vem do principal + silêncio)
     subprocess.run([
         ffmpeg, "-y", "-v", "error",
         "-loop", "1", "-t", f"{duration:.2f}", "-i", outro_img,
-        "-f", "lavfi", "-t", f"{duration:.2f}", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
         "-vf", (f"scale={out_w}:{out_h}:force_original_aspect_ratio=increase,"
-                f"crop={out_w}:{out_h},fade=in:st=0:d=0.5,format=yuv420p"),
-        "-map", "0:v", "-map", "1:a",
-        "-c:v", "libx264", "-preset", "medium", "-crf", "17",
-        "-c:a", "aac", "-b:a", "192k", "-r", "25", outro_seg,
+                f"crop={out_w}:{out_h},setsar=1,format=yuv420p"),
+        "-r", f"{fps:.3f}",
+        "-c:v", "libx264", "-preset", "medium", "-crf", str(max(0, crf - 2)),
+        "-pix_fmt", "yuv420p", outro_seg,
     ], check=True)
-    # concatena: vídeo principal + cartão de final
+
     tmp_final = main_mp4 + ".cat.mp4"
+    # preset mais leve no passo de concatenação (economiza tempo sem perder qualidade visível)
+    fast_preset = "medium" if preset in ("slow", "slower", "veryslow") else preset
     subprocess.run([
         ffmpeg, "-y", "-v", "error", "-i", main_mp4, "-i", outro_seg,
-        "-filter_complex", "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[v][a]",
+        "-filter_complex",
+        (f"[0:v]setsar=1,fps={fps:.3f}[v0];"
+         f"[1:v]setsar=1,fps={fps:.3f}[v1];"
+         f"[v0][v1]xfade=transition=fade:duration={xf:.2f}:offset={max(0.0, main_dur - xf):.2f}[v];"
+         f"[0:a]apad=whole_dur={total:.2f},atrim=0:{total:.2f},afade=t=out:st={max(0.0, total - 0.8):.2f}:d=0.8[a]"),
         "-map", "[v]", "-map", "[a]",
-        "-c:v", "libx264", "-preset", "medium", "-crf", "17",
-        "-c:a", "aac", "-b:a", "192k", tmp_final,
+        "-c:v", "libx264", "-preset", fast_preset, "-crf", str(crf),
+        "-c:a", "aac", "-b:a", "192k", "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart", tmp_final,
     ], check=True)
     os.replace(tmp_final, main_mp4)
     try:
@@ -203,7 +241,7 @@ def render_clip(
     out_path: str,
     cfg: Optional[RenderConfig] = None,
     workdir: Optional[str] = None,
-    ffmpeg: str = "ffmpeg",
+    ffmpeg: str = FFMPEG,
     title: Optional[str] = None,
     title_variant: int = 0,
 ) -> str:
@@ -273,7 +311,8 @@ def render_clip(
             gen = True
         try:
             _append_outro(out_path, outro_png, out_w, out_h,
-                          duration=cfg.outro_dur, workdir=workdir, ffmpeg=ffmpeg)
+                          duration=cfg.outro_dur, workdir=workdir, ffmpeg=ffmpeg,
+                          crf=cfg.crf, preset=cfg.preset)
         except Exception:
             pass
         if gen and os.path.exists(outro_png):
@@ -297,7 +336,7 @@ def render_clip(
     return out_path
 
 
-def burn_ass_if_available(src, ass_path, out_path, fontsdir, ffmpeg="ffmpeg") -> bool:
+def burn_ass_if_available(src, ass_path, out_path, fontsdir, ffmpeg=FFMPEG) -> bool:
     """Se o ffmpeg tiver libass, queima um .ass diretamente (alternativa premium)."""
     if not _has_libass(ffmpeg):
         return False

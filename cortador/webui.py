@@ -155,7 +155,7 @@ def limpar():
 
 
 @app.post("/processar")
-async def processar(
+def processar(
     video: UploadFile = File(...),
     n_cortes: int = Form(4),
     formato: str = Form("9:16"),
@@ -173,11 +173,15 @@ async def processar(
     out_dir = os.path.join(BASE_OUT, job_id)
     os.makedirs(out_dir, exist_ok=True)
 
-    # salva o vídeo enviado
+    # salva o vídeo enviado (em blocos, para não travar a interface)
     ext = os.path.splitext(video.filename or "video.mp4")[1] or ".mp4"
     tmp_video = os.path.join(out_dir, f"entrada{ext}")
     with open(tmp_video, "wb") as f:
-        shutil.copyfileobj(video.file, f)
+        while True:
+            chunk = video.file.read(4 * 1024 * 1024)
+            if not chunk:
+                break
+            f.write(chunk)
 
     with JOBS_LOCK:
         JOBS[job_id] = {"status": "processando", "out_dir": out_dir, "log": [], "report": None}
@@ -452,7 +456,7 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "<p class='lead'>Suba a live, escolha as opções e receba os melhores cortes (1–3 min) "
         "com legenda profissional, título, hashtags e score de viralidade. "
         "<b>100% privado:</b> o vídeo é processado aqui, nada é enviado para fora.</p>"
-        "<form class='form' action='/processar' method='post' enctype='multipart/form-data' onsubmit='startProcess()'>"
+        "<form id='pform' class='form' action='/processar' method='post' enctype='multipart/form-data'>"
         "<label>Vídeo / Live (mp4, mov…)</label>"
         "<input type='file' name='video' accept='video/*' required>"
         "<div class='row'>"
@@ -494,15 +498,47 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "<div id='loading' class='loading'>"
         "<div class='lbox'>"
         "<div class='lspin'></div>"
-        "<h3>Processando seu vídeo…</h3>"
-        "<p>Enviando e analisando. Isso pode levar alguns minutos.<br><b>Não feche esta página.</b></p>"
+        "<h3 id='ltitle'>Enviando seu vídeo…</h3>"
+        "<div class='pbar'><div class='pfill' id='lfill' style='width:0%'></div></div>"
+        "<p id='lmsg'>0% enviado<br><b>Não feche esta página.</b></p>"
         "</div></div>"
         "<script>"
-        "function startProcess(){"
-        "var l=document.getElementById('loading');if(l)l.style.display='flex';"
-        "var b=document.querySelector('button[type=submit]');"
-        "if(b){b.disabled=true;b.textContent='⏳ Processando…';}"
-        "}"
+        "function fmtMB(n){return (n/1048576).toFixed(1)+' MB';}"
+        "document.getElementById('pform').addEventListener('submit',function(e){"
+        "e.preventDefault();"
+        "var form=this;"
+        "var l=document.getElementById('loading'),fill=document.getElementById('lfill');"
+        "var msg=document.getElementById('lmsg'),ttl=document.getElementById('ltitle');"
+        "var b=document.querySelector(\"button[type=submit]\");"
+        "l.style.display='flex';"
+        "if(b){b.disabled=true;b.textContent='⏳ Enviando…';}"
+        "var xhr=new XMLHttpRequest();"
+        "xhr.open('POST',form.action,true);"
+        "xhr.upload.onprogress=function(ev){"
+        "if(!ev.lengthComputable)return;"
+        "var pct=Math.round(ev.loaded/ev.total*100);"
+        "fill.style.width=pct+'%';"
+        "msg.innerHTML=pct+'% enviado ('+fmtMB(ev.loaded)+' de '+fmtMB(ev.total)+')<br><b>Não feche esta página.</b>';"
+        "if(pct>=100){ttl.textContent='Enviado! Preparando o processamento…';}"
+        "};"
+        "xhr.onload=function(){"
+        "if(xhr.status>=200&&xhr.status<400){"
+        "ttl.textContent='Processando seu vídeo…';"
+        "msg.innerHTML='Analisando, transcrevendo e renderizando.<br><b>Não feche esta página.</b>';"
+        "fill.style.width='100%';"
+        "setTimeout(function(){window.location=xhr.responseURL||'/trabalhos';},700);"
+        "}else{"
+        "l.style.display='none';"
+        "if(b){b.disabled=false;b.textContent='▶ Processar vídeo';}"
+        "alert('Erro no envio ('+xhr.status+'). Tente novamente.');"
+        "}};"
+        "xhr.onerror=function(){"
+        "l.style.display='none';"
+        "if(b){b.disabled=false;b.textContent='▶ Processar vídeo';}"
+        "alert('Falha de conexão durante o envio. Tente novamente.');"
+        "};"
+        "xhr.send(new FormData(form));"
+        "});"
         "</script>"
         "</body></html>")
 

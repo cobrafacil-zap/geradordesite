@@ -13,6 +13,7 @@ from . import analysis, caption_engine, glossary, metadata, paint, virality
 from . import speech_enhance
 from . import ai_understand
 from .captions import write_subtitles
+from .ffbin import FFMPEG
 from .probe import probe, MediaInfo, TARGET_SIZES
 from .render import RenderConfig, render_clip
 from .styles import get_style
@@ -46,7 +47,13 @@ class PipelineOptions:
     outro: bool = True                # cartão de final (com transição) ao fim do corte
     outro_img: Optional[str] = None   # imagem do final (senão gera um cartão)
     render_video: bool = True
-    ffmpeg: str = "ffmpeg"
+    ffmpeg: str = FFMPEG
+
+
+# imagem de fechamento padrão (assets/outro.png) — usada no fim de todos os cortes
+DEFAULT_OUTRO_IMG = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "outro.png"
+)
 
 
 # qualidade da codificação do vídeo (menor CRF = melhor imagem)
@@ -65,7 +72,7 @@ def _slugify(text: str, max_len: int = 40) -> str:
 
 def _extract_audio_range(src: str, start: float, end: float, out_wav: str, sr: int = 16000):
     # normaliza o volume para o Whisper (áudio alto = transcrição melhor), sem cortar a fala
-    cmd = ["ffmpeg", "-y", "-v", "error", "-ss", f"{start:.3f}", "-i", src,
+    cmd = [FFMPEG, "-y", "-v", "error", "-ss", f"{start:.3f}", "-i", src,
            "-t", f"{max(0.5, end - start):.3f}", "-vn", "-ac", "1", "-ar", str(sr),
            "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", out_wav]
     subprocess.run(cmd, check=True)
@@ -205,12 +212,15 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
         if opts.render_video:
             _prog(f"🎬 Renderizando corte {i}/{len(best_idx)}…", int(50 + 45 * i / max(1, len(best_idx))))
             qp = QUALITY_PRESETS.get(opts.render_quality, QUALITY_PRESETS["alta"])
+            outro_img = opts.outro_img
+            if not outro_img and os.path.exists(DEFAULT_OUTRO_IMG):
+                outro_img = DEFAULT_OUTRO_IMG   # fechamento padrão (assets/outro.png)
             rcfg = RenderConfig(
                 target_format=target_fmt, reframe=opts.reframe, style=opts.style,
                 progress_bar=opts.progress_bar, zoom=opts.zoom,
                 logo=opts.logo, banner=opts.banner,
                 crf=qp["crf"], preset=qp["preset"],
-                outro=opts.outro, outro_img=opts.outro_img,
+                outro=opts.outro, outro_img=outro_img,
             )
             render_clip(input_path, info, w.start, w.duration,
                         (events if opts.captions else []), mp4,

@@ -10,9 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# dependências (CLI de vídeo + web)
+# dependências (CLI de vídeo + web + Speech Enhancer)
 COPY requirements-cli.txt requirements.txt ./
-RUN pip install --no-cache-dir -r requirements-cli.txt -r requirements.txt python-multipart
+RUN pip install --no-cache-dir -r requirements-cli.txt -r requirements.txt \
+        python-multipart fastapi uvicorn demucs soundfile
 
 # código da aplicação
 COPY . .

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import subprocess
+
+from .ffbin import FFPROBE
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -36,7 +38,7 @@ class MediaInfo:
 
 def _run_ffprobe(path: str) -> dict:
     cmd = [
-        "ffprobe", "-v", "error", "-print_format", "json",
+        FFPROBE, "-v", "error", "-print_format", "json",
         "-show_format", "-show_streams", path,
     ]
     out = subprocess.run(cmd, capture_output=True, text=True, check=True).stdout

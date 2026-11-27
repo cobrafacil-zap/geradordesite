@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import glob
 import os
+
+from .ffbin import FFMPEG
 import shutil
 import subprocess
 import sys
@@ -51,7 +53,7 @@ def isolate_vocals(in_wav: str, out_wav: str, model: str = "htdemucs") -> str:
         if not os.path.exists(vocals):
             raise RuntimeError("vocals.wav não encontrado no output do Demucs.")
         # normaliza a voz (Demucs devolve baixa) para o Whisper acertar
-        sp.run(["ffmpeg", "-y", "-v", "error", "-i", vocals,
+        sp.run([FFMPEG, "-y", "-v", "error", "-i", vocals,
                 "-af", "loudnorm=I=-16:TP=-1.5:LRA=11,alimiter=limit=0.95",
                 out_wav], check=True)
         return out_wav
@@ -73,7 +75,7 @@ def enhance_for_video(in_wav: str, out_wav: str, model: str = "htdemucs",
         if os.path.exists(no_vocals):
             # mistura: voz no talo + fundo bem mais baixo
             cmd = [
-                "ffmpeg", "-y", "-v", "error",
+                FFMPEG, "-y", "-v", "error",
                 "-i", vocals, "-i", no_vocals,
                 "-filter_complex",
                 f"[0:a]volume=1.0[voz];[1:a]volume={bg_level}[fundo];"
@@ -82,7 +84,7 @@ def enhance_for_video(in_wav: str, out_wav: str, model: str = "htdemucs",
                 "-map", "[out]", out_wav,
             ]
         else:
-            cmd = ["ffmpeg", "-y", "-v", "error", "-i", vocals,
+            cmd = [FFMPEG, "-y", "-v", "error", "-i", vocals,
                    "-af", "loudnorm=I=-15:TP=-1.5,alimiter=limit=0.95", out_wav]
         sp.run(cmd, check=True)
         return out_wav

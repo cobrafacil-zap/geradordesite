@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+
+from .ffbin import FFMPEG
 import os
 from dataclasses import dataclass
 from typing import List, Optional
@@ -51,7 +53,7 @@ def extract_wav(path: str, sr: int = 16000) -> str:
     tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     tmp.close()
     cmd = [
-        "ffmpeg", "-y", "-v", "error", "-i", path,
+        FFMPEG, "-y", "-v", "error", "-i", path,
         "-vn", "-ac", "1", "-ar", str(sr),
         "-f", "wav", tmp.name,
     ]
@@ -231,6 +233,20 @@ def analyze_and_select(
     wav = extract_wav(video_path)
     try:
         stats = compute_stats(wav)
+        # vídeo curto (menor que o tamanho mínimo de corte): usa o vídeo inteiro,
+        # dividido em partes iguais se pedirem mais de um corte
+        if stats.duration <= min_len:
+            n = max(1, int(count))
+            part = stats.duration / n
+            wins = [
+                Window(start=round(i * part, 2),
+                       end=round(stats.duration if i == n - 1 else (i + 1) * part, 2),
+                       score=1.0, reason="vídeo curto: corte único")
+                for i in range(n)
+            ]
+            if keep_wav:
+                os.replace(wav, keep_wav)
+            return wins, stats
         wins = select_best(stats, count=count, min_len=min_len, max_len=max_len, target_len=target_len)
         if keep_wav:
             os.replace(wav, keep_wav)
