@@ -72,7 +72,15 @@ def _extract_audio_range(src: str, start: float, end: float, out_wav: str, sr: i
     return out_wav
 
 
-def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log=print) -> dict:
+def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log=print, progress=None) -> dict:
+    """Pipeline completo. `progress(step, pct)` reporta o andamento (0..100)."""
+
+    def _prog(step, pct):
+        if progress:
+            try:
+                progress(step, pct)
+            except Exception:
+                pass
     opts = options or PipelineOptions()
     out_dir = os.path.abspath(opts.output_dir)
     clips_dir = os.path.join(out_dir, "cortes")
@@ -88,6 +96,7 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
         target_fmt = "9:16" if info.is_vertical else "16:9"
     log(f"   • Formato de entrada: {src_fmt} ({info.width}x{info.height}) · duração {info.duration:.0f}s")
     log(f"   • Formato de saída:  {target_fmt}")
+    _prog("🔎 Analisando o vídeo…", 6)
 
     log("🎧 Analisando áudio para achar os melhores takes…")
     ai_on = opts.use_ai and ai_understand.is_available()
@@ -105,6 +114,7 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
     transcripts = []
     for k, w in enumerate(wins):
         log(f"   • transcrevendo candidato {k + 1}/{len(wins)} [{w.start:.0f}s]")
+        _prog(f"🎤 Transcrevendo trecho {k + 1}/{len(wins)}…", int(15 + 22 * (k + 1) / max(1, len(wins))))
         wav = os.path.join(work_dir, f"win_{k}.wav")
         _extract_audio_range(input_path, w.start, w.end, wav)
         twav = wav
@@ -135,6 +145,7 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
         transcripts.append(tr)
 
     # 2) IA entende o conteúdo e escolhe os MELHORES momentos
+    _prog("🧠 IA escolhendo os melhores momentos…", 45)
     best_idx = list(range(min(opts.count, len(wins))))
     if ai_on and len(wins) > opts.count:
         try:
@@ -192,6 +203,7 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
         # 7) renderiza o vídeo
         render_status = "pulado"
         if opts.render_video:
+            _prog(f"🎬 Renderizando corte {i}/{len(best_idx)}…", int(50 + 45 * i / max(1, len(best_idx))))
             qp = QUALITY_PRESETS.get(opts.render_quality, QUALITY_PRESETS["alta"])
             rcfg = RenderConfig(
                 target_format=target_fmt, reframe=opts.reframe, style=opts.style,
@@ -248,6 +260,7 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
 
     log(f"\n✅ Pronto! {len(results)} cortes em: {clips_dir}")
     log(f"📄 Relatórios: report.json · report.md")
+    _prog("✅ Concluído!", 100)
     return report
 
 

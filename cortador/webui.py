@@ -202,7 +202,13 @@ async def processar(
             def log(msg):
                 with JOBS_LOCK:
                     JOBS[job_id]["log"].append(str(msg))
-            report = run_pipeline(tmp_video, opts, log=log)
+
+            def prog(step, pct):
+                with JOBS_LOCK:
+                    JOBS[job_id]["step"] = str(step)
+                    JOBS[job_id]["pct"] = int(pct)
+
+            report = run_pipeline(tmp_video, opts, log=log, progress=prog)
             with JOBS_LOCK:
                 JOBS[job_id]["report"] = report
                 JOBS[job_id]["status"] = "pronto"
@@ -235,12 +241,16 @@ def job_page(job_id: str):
     if not job:
         # 3) Último recurso: pasta existe mas ainda sem relatório → ainda processando
         if os.path.isdir(out_dir):
-            return PROCESSING.replace("__ID__", job_id).replace("__LOG__", "Processando… (aguarde)")
+            return (PROCESSING.replace("__ID__", job_id).replace("__LOG__", "Processando… (aguarde)")
+                    .replace("__STEP__", "Processando…").replace("__PCT__", "15"))
         return HTMLResponse("<h3>Job não encontrado.</h3>", status_code=404)
 
     if job["status"] == "processando":
         log_html = "<br>".join(job["log"][-12:]) or "Iniciando…"
-        return PROCESSING.replace("__ID__", job_id).replace("__LOG__", log_html)
+        step = job.get("step", "Processando…")
+        pct = job.get("pct", 10)
+        return (PROCESSING.replace("__ID__", job_id).replace("__LOG__", log_html)
+                .replace("__STEP__", step).replace("__PCT__", str(pct)))
 
     if job["status"] == "erro":
         return HTMLResponse(f"<h3>Erro no processamento</h3><pre>{job['log'][-1]}</pre>")
@@ -427,6 +437,11 @@ pre{background:#070a12;border:1px solid var(--line);border-radius:12px;padding:1
 .lspin{width:58px;height:58px;border:5px solid rgba(255,255,255,.22);border-top-color:#ff2d6f;border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 22px}
 .lbox h3{margin:0 0 10px;font-size:22px}
 .lbox p{color:#c7cfe0;font-size:15px;line-height:1.7}
+
+/* ===== Barra de progresso (mostra o que está fazendo) ===== */
+.pbar{width:100%;max-width:440px;height:18px;background:#1b2136;border-radius:999px;overflow:hidden;margin:20px auto 12px;border:1px solid var(--line)}
+.pfill{height:100%;width:0;background:linear-gradient(90deg,#ff2d6f,#ffd400);border-radius:999px;transition:width .5s}
+.pstep{text-align:center;color:#fff;font-weight:700;font-size:17px;margin:0 0 6px}
 """
 
 PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
@@ -493,11 +508,13 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
 
 PROCESSING = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
               "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-              "<meta http-equiv='refresh' content='5'>"
+              "<meta http-equiv='refresh' content='4'>"
               "<title>Processando…</title><style>" + _CSS + "</style></head><body><div class='wrap'>"
-              "<h1>Processando…</h1><div class='spin'></div>"
-              "<p class='lead'>Estamos achando os melhores takes, transcrevendo e renderizando as legendas.<br>"
-              "Esta página atualiza sozinha.</p>"
+              "<h1>Processando seu vídeo…</h1><div class='spin'></div>"
+              "<div class='pbar'><div class='pfill' style='width:__PCT__%'></div></div>"
+              "<p class='pstep'>__STEP__</p>"
+              "<p class='lead'>A IA está achando os melhores momentos, transcrevendo e renderizando.<br>"
+              "Esta página atualiza sozinha — pode deixar aberta.</p>"
               "<pre>__LOG__</pre>"
               "<p><a class='dl ghost' href='/job/__ID__'>Atualizar agora</a></p>"
               "</div></body></html>")
