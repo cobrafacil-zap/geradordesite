@@ -167,6 +167,216 @@ def health():
     return {"ok": True}
 
 
+# ---------------------------------------------------------------------------
+#  📤 FILA DE PUBLICAÇÃO (publicar um por vez, com 1 clique)
+# ---------------------------------------------------------------------------
+
+def _load_report(job_id: str) -> Optional[dict]:
+    p = os.path.join(BASE_OUT, job_id, "report.json")
+    if not os.path.isfile(p):
+        return None
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _save_report(job_id: str, rep: dict) -> None:
+    p = os.path.join(BASE_OUT, job_id, "report.json")
+    tmp = p + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(rep, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, p)
+
+
+def _fila_itens(pendentes: bool = True) -> List[dict]:
+    """Cortes de todos os trabalhos, em ordem de publicação (mais antigo primeiro)."""
+    itens: List[dict] = []
+    if not os.path.isdir(BASE_OUT):
+        return itens
+    for name in sorted(os.listdir(BASE_OUT)):
+        d = os.path.join(BASE_OUT, name)
+        if not os.path.isdir(d):
+            continue
+        rep_path = os.path.join(d, "report.json")
+        rep = _load_report(name)
+        if not rep:
+            continue
+        try:
+            ts = os.path.getmtime(rep_path)
+        except OSError:
+            ts = 0.0
+        for c in rep.get("clips", []):
+            fname = c.get("file") or ""
+            if not fname:
+                continue
+            pub = bool(c.get("publicado"))
+            skip = bool(c.get("pulado"))
+            if pendentes and (pub or skip):
+                continue
+            m = c.get("metadata", {}) or {}
+            itens.append({
+                "job_id": name,
+                "index": int(c.get("index", 0) or 0),
+                "file": fname,
+                "title": (m.get("title") or f"Corte {c.get('index')}").strip(),
+                "desc": (m.get("description") or "").strip(),
+                "tags": (m.get("hashtags_str") or "").strip(),
+                "publicado": pub,
+                "pulado": skip,
+                "ts": ts,
+            })
+    itens.sort(key=lambda x: (x["ts"], x["job_id"], x["index"]))
+    return itens
+
+
+@app.post("/fila/marcar")
+def fila_marcar(job_id: str = Form(...), index: int = Form(...),
+                publicado: str = Form("1"), pulado: Optional[str] = Form(None)):
+    """Marca um corte como publicado (ou desmarca) / volta para a fila."""
+    rep = _load_report(job_id)
+    if rep:
+        novo_pub = str(publicado).lower() in ("1", "true", "on", "sim")
+        for c in rep.get("clips", []):
+            try:
+                same = int(c.get("index", -1)) == int(index)
+            except (TypeError, ValueError):
+                same = False
+            if not same:
+                continue
+            c["publicado"] = novo_pub
+            if pulado is not None:
+                c["pulado"] = str(pulado).lower() in ("1", "true", "on", "sim")
+            elif novo_pub:
+                c["pulado"] = False
+        _save_report(job_id, rep)
+    return RedirectResponse(url="/fila", status_code=303)
+
+
+@app.post("/fila/pular")
+def fila_pular(job_id: str = Form(...), index: int = Form(...)):
+    """Pula um corte (tira da fila sem marcar como publicado)."""
+    rep = _load_report(job_id)
+    if rep:
+        for c in rep.get("clips", []):
+            try:
+                same = int(c.get("index", -1)) == int(index)
+            except (TypeError, ValueError):
+                same = False
+            if same:
+                c["pulado"] = True
+                c["publicado"] = False
+        _save_report(job_id, rep)
+    return RedirectResponse(url="/fila", status_code=303)
+
+
+@app.get("/fila", response_class=HTMLResponse)
+def fila():
+    itens = _fila_itens(pendentes=True)
+    todos = _fila_itens(pendentes=False)
+    feitos = len([t for t in todos if t["publicado"]])
+    return _render_fila(itens, todos, feitos)
+
+
+def _render_fila(pendentes: List[dict], todos: List[dict], feitos: int) -> str:
+    total = len(todos)
+
+    # ---------- próximo da fila ----------
+    if pendentes:
+        p = pendentes[0]
+        restantes = len(pendentes)
+        prox = f"""
+        <div class="nextbox" id="nextbox">
+          <div class="nhead">▶ <b>Próximo a publicar</b>
+            <span class="badge">{restantes} na fila</span>
+            <button class="rembtn" id="rembtn" onclick="lembrar(this)">🔔 Me lembrar a cada 10 min</button>
+          </div>
+          <div class="ngrid">
+            <div class="nvideo" onclick="playVid('/saida/{p['job_id']}/cortes/{p['file']}')">
+              <img src="/thumb/{p['job_id']}/{p['file']}" loading="lazy" onerror="this.style.display='none'">
+              <div class="play"><span>▶</span></div>
+            </div>
+            <div class="ncard">
+              <div class="cbox"><div class="clab">✏️ Título</div>
+                <div class="ctext" id="f_t">{esc(p['title'])}</div>
+                <button class="cbtn" onclick="copiarEl('f_t',this)">📋 Copiar</button></div>
+              <div class="cbox"><div class="clab">📝 Legenda</div>
+                <div class="ctext" id="f_d">{esc(p['desc'])}</div>
+                <button class="cbtn" onclick="copiarEl('f_d',this)">📋 Copiar</button></div>
+              <div class="cbox"><div class="clab">#️⃣ Hashtags</div>
+                <div class="ctext" id="f_h">{esc(p['tags'])}</div>
+                <button class="cbtn" onclick="copiarEl('f_h',this)">📋 Copiar</button></div>
+              <div class="nbtns">
+                <a class="dlbig" href="/saida/{p['job_id']}/cortes/{p['file']}"
+                   onclick="this.textContent='⏳ Baixando…'">⬇ Baixar vídeo</a>
+                <button class="pubbtn" id="pubbtn" onclick="publicar()">🌐 Copiar tudo e abrir o TikTok</button>
+                <form method="post" action="/fila/marcar" style="display:inline">
+                  <input type="hidden" name="job_id" value="{p['job_id']}">
+                  <input type="hidden" name="index" value="{p['index']}">
+                  <input type="hidden" name="publicado" value="1">
+                  <button class="dl ghost" type="submit">✅ Já publicado</button>
+                </form>
+                <form method="post" action="/fila/pular" style="display:inline">
+                  <input type="hidden" name="job_id" value="{p['job_id']}">
+                  <input type="hidden" name="index" value="{p['index']}">
+                  <button class="dl ghost" type="submit">⏭ Pular</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>"""
+    else:
+        prox = ("<div class='card'><h3>🎉 Fila vazia — tudo publicado!</h3>"
+                "<p class='lead'>Não há cortes pendentes. "
+                "<a class='dl' href='/'>Processar outro vídeo</a> "
+                "<a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a></p></div>")
+
+    # ---------- lista completa ----------
+    linhas = []
+    for it in todos:
+        if it["publicado"]:
+            chip, acao = "<span class='st ok'>✅ publicado</span>", (
+                f"<form method='post' action='/fila/marcar' style='display:inline'>"
+                f"<input type='hidden' name='job_id' value='{it['job_id']}'>"
+                f"<input type='hidden' name='index' value='{it['index']}'>"
+                f"<input type='hidden' name='publicado' value='0'>"
+                f"<button class='dlsm' type='submit'>↩ Voltar p/ fila</button></form>")
+        elif it.get("pulado"):
+            chip, acao = "<span class='st skip'>⏭ pulado</span>", (
+                f"<form method='post' action='/fila/marcar' style='display:inline'>"
+                f"<input type='hidden' name='job_id' value='{it['job_id']}'>"
+                f"<input type='hidden' name='index' value='{it['index']}'>"
+                f"<input type='hidden' name='publicado' value='0'>"
+                f"<input type='hidden' name='pulado' value='0'>"
+                f"<button class='dlsm' type='submit'>↩ Voltar p/ fila</button></form>")
+        else:
+            chip, acao = "<span class='st wait'>⏳ pendente</span>", (
+                f"<form method='post' action='/fila/marcar' style='display:inline'>"
+                f"<input type='hidden' name='job_id' value='{it['job_id']}'>"
+                f"<input type='hidden' name='index' value='{it['index']}'>"
+                f"<input type='hidden' name='publicado' value='1'>"
+                f"<button class='dlsm' type='submit'>✅ publicado</button></form>")
+        linhas.append(f"""
+        <div class="qitem">
+          <img class="qthumb" src="/thumb/{it['job_id']}/{it['file']}" loading="lazy"
+               onclick="playVid('/saida/{it['job_id']}/cortes/{it['file']}')"
+               onerror="this.style.display='none'">
+          <div class="qbody">
+            <div class="qtitle">{esc(it['title'])}</div>
+            <div class="qtags">{esc(it['tags'])}</div>
+          </div>
+          <div class="qacts">{chip}{acao}
+            <a class="dlsm" href="/saida/{it['job_id']}/cortes/{it['file']}">⬇</a></div>
+        </div>""")
+
+    lista = "".join(linhas) or "<p class='lead'>Nenhum corte ainda.</p>"
+
+    return FILA_PAGE.replace("__NEXT__", prox).replace("__LISTA__", lista) \
+        .replace("__PEND__", str(len(pendentes))) \
+        .replace("__FEITOS__", str(feitos)).replace("__TOTAL__", str(total))
+
+
 def _gb(n: int) -> float:
     return round(n / (1024 ** 3), 1)
 
@@ -595,6 +805,34 @@ pre{background:#070a12;border:1px solid var(--line);border-radius:12px;padding:1
 button.dl{border:0;cursor:pointer;font-family:inherit}
 .dl.zip{background:linear-gradient(135deg,var(--brand),#ff5f8f);box-shadow:0 10px 24px rgba(255,45,111,.25)}
 .dl.zip:hover{filter:brightness(1.07);color:#fff}
+
+/* ===== Fila de publicação ===== */
+.nextbox{background:var(--card);border:1px solid var(--brand);border-radius:18px;padding:16px;box-shadow:0 14px 40px rgba(255,45,111,.14)}
+.nextbox.flash{animation:flq 1s ease-in-out 3}
+@keyframes flq{0%,100%{box-shadow:0 14px 40px rgba(255,45,111,.14)}50%{box-shadow:0 0 0 7px rgba(255,45,111,.35)}}
+.nhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:17px;margin-bottom:14px}
+.badge{background:var(--brand);color:#fff;border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:800}
+.rembtn{margin-left:auto;background:#1b2136;border:1px solid var(--line);color:#cdd6f4;border-radius:10px;padding:8px 13px;font-size:13px;cursor:pointer}
+.rembtn.on{background:#12352a;border-color:#2ee6a8;color:#2ee6a8}
+.ngrid{display:grid;grid-template-columns:180px 1fr;gap:16px}
+@media(max-width:640px){.ngrid{grid-template-columns:1fr}}
+.nvideo{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:9/16;cursor:pointer}
+.nvideo img{width:100%;height:100%;object-fit:cover}
+.ncard{display:flex;flex-direction:column;gap:8px}
+.nbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.nbtns .dlbig{flex:1 1 220px}
+.pubbtn{flex:1 1 240px;padding:15px;border-radius:12px;background:linear-gradient(135deg,#151515,#333);border:1px solid var(--line);color:#fff;font-weight:800;font-size:15px;cursor:pointer}
+.pubbtn:hover{border-color:var(--brand)}
+.qitem{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+.qthumb{width:52px;height:92px;object-fit:cover;border-radius:8px;background:#000;cursor:pointer;flex:0 0 auto}
+.qbody{flex:1;min-width:0}
+.qtitle{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qtags{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qacts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.st{font-size:11.5px;font-weight:800;padding:4px 9px;border-radius:999px;white-space:nowrap}
+.st.ok{background:#12352a;color:#2ee6a8}
+.st.wait{background:#3a2f12;color:#ffd400}
+.st.skip{background:#1b2136;color:#9aa4bd}
 .clip-desc{padding:8px 16px 16px;color:var(--muted);font-size:13.5px;line-height:1.5}
 
 /* ===== Blocos de texto copiáveis (título / legenda / hashtags) ===== */
@@ -636,7 +874,7 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         "<title>Cortador de Vídeos com Legenda</title><style>" + _CSS + "</style></head><body><div class='wrap'>"
         "<h1>🎬 Cortador de Vídeos com Legenda</h1>"
-        "<p style='text-align:right;margin:-10px 0 0'><a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a></p>"
+        "<p style='text-align:right;margin:-10px 0 0'><a class='dl ghost' href='/fila'>📤 Fila</a> <a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a></p>"
         f"<p class='lead' style='font-size:13px'>💾 Espaço livre no disco: <b>{_gb(shutil.disk_usage(BASE_OUT).free)} GB</b></p>"
         "<p class='lead'>Suba a live, escolha as opções e receba os melhores cortes (1–3 min) "
         "com legenda profissional, título, hashtags e score de viralidade. "
@@ -746,7 +984,7 @@ RESULT = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
           "<h1 style='margin:10px 0 20px'>🔥 Momentos Virais</h1>"
           "__TOPBAR__"
           "<div class='grid'>__CARDS__</div>"
-          "<p style='margin:26px 0 60px'>__REPORT__ &nbsp; <a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a> &nbsp; <a class='dl ghost' href='/'>← Cortar outro vídeo</a></p>"
+          "<p style='margin:26px 0 60px'>__REPORT__ &nbsp; <a class='dl' href='/fila'>📤 Ir para a fila de publicação</a> &nbsp; <a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a> &nbsp; <a class='dl ghost' href='/'>← Cortar outro vídeo</a></p>"
           "</div>__QUEUE__"
           "<div id='vmodal' class='vmodal'><div class='vbox'>"
           "<button class='vclose' onclick='closeVid()' title='Fechar'>✕</button>"
@@ -800,10 +1038,73 @@ JOBS_PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
              "<meta name='viewport' content='width=device-width, initial-scale=1'>"
              "<title>Meus trabalhos</title><style>" + _CSS + "</style></head><body><div class='wrap'>"
              "<h1>📁 Meus trabalhos</h1>"
+             "<p style='text-align:right;margin:-46px 0 16px'><a class='dl ghost' href='/fila'>📤 Fila de publicação</a></p>"
              "<p class='lead'>__N__ trabalho(s) guardado(s). Clique em <b>Abrir</b> para ver os cortes, "
              "baixar os vídeos e as legendas.</p>"
              "__JOBS__"
              "</div></body></html>")
+
+
+FILA_PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
+             "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+             "<title>Fila de publicação</title><style>" + _CSS + "</style></head><body><div class='wrap'>"
+             "<h1 style='margin:10px 0 6px'>📤 Fila de publicação</h1>"
+             "<p class='lead' style='margin-bottom:22px'>"
+             "<b>__PEND__</b> corte(s) na fila · <b>__FEITOS__</b> de <b>__TOTAL__</b> publicados.<br>"
+             "Publique um por vez: <b>⬇ baixe o vídeo</b> → <b>🌐 Copiar tudo e abrir o TikTok</b> → "
+             "cole e publique → <b>✅ Já publicado</b>. A fila avança sozinha.</p>"
+             "__NEXT__"
+             "<h2 style='margin:32px 0 12px'>📋 Todos os cortes</h2>"
+             "__LISTA__"
+             "<p style='margin-top:26px'>"
+             "<a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a> "
+             "<a class='dl ghost' href='/'>← Cortar outro vídeo</a></p>"
+             "</div>"
+             "<div id='vmodal' class='vmodal'><div class='vbox'>"
+             "<button class='vclose' onclick='closeVid()' title='Fechar'>✕</button>"
+             "<video id='vplayer' controls autoplay playsinline></video>"
+             "</div></div>"
+             "<script>"
+             "function playVid(u){var v=document.getElementById('vplayer');v.src=u;"
+             "document.getElementById('vmodal').style.display='flex';v.play();}"
+             "function closeVid(){var v=document.getElementById('vplayer');v.pause();v.src='';"
+             "document.getElementById('vmodal').style.display='none';}"
+             "var m=document.getElementById('vmodal');"
+             "m.addEventListener('click',function(e){if(e.target===this)closeVid();});"
+             "document.addEventListener('keydown',function(e){if(e.key==='Escape')closeVid();});"
+             "function _fbcopy(txt){var ta=document.createElement('textarea');ta.value=txt;"
+             "ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();"
+             "try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}"
+             "function copyText(txt,btn){var done=function(){if(!btn)return;var o=btn.textContent;"
+             "btn.textContent='✅ Copiado!';setTimeout(function(){btn.textContent=o;},1300);};"
+             "if(navigator.clipboard&&navigator.clipboard.writeText){"
+             "navigator.clipboard.writeText(txt).then(done,function(){_fbcopy(txt);done();});}"
+             "else{_fbcopy(txt);done();}}"
+             "function copiarEl(id,btn){copyText(document.getElementById(id).innerText,btn);}"
+             "function publicar(){"
+             "var t=document.getElementById('f_t').innerText;"
+             "var d=document.getElementById('f_d').innerText;"
+             "var h=document.getElementById('f_h').innerText;"
+             "copyText([t,d,h].filter(Boolean).join('\\n\\n'),document.getElementById('pubbtn'));"
+             "setTimeout(function(){window.open('https://www.tiktok.com/upload','_blank');},300);}"
+             "var timer=null;"
+             "function lembrar(btn){"
+             "if(timer){clearInterval(timer);timer=null;"
+             "btn.textContent='🔔 Me lembrar a cada 10 min';btn.classList.remove('on');return;}"
+             "if(window.Notification&&Notification.permission==='default'){"
+             "try{Notification.requestPermission();}catch(e){}}"
+             "btn.textContent='🔔 Lembretes ligados (a cada 10 min)';btn.classList.add('on');"
+             "aviso();timer=setInterval(aviso,10*60*1000);}"
+             "function aviso(){"
+             "var box=document.getElementById('nextbox');"
+             "if(box){box.classList.add('flash');setTimeout(function(){box.classList.remove('flash');},3000);}"
+             "var t=(document.getElementById('f_t')||{}).innerText||'Tem corte na fila!';"
+             "if(window.Notification&&Notification.permission==='granted'){"
+             "try{new Notification('📤 Hora de publicar no TikTok!',{body:t});}catch(e){}}"
+             "var b=document.getElementById('rembtn');"
+             "if(b){b.textContent='🔔 Próximo lembrete em 10 min';"
+             "setTimeout(function(){b.textContent='🔔 Lembretes ligados (a cada 10 min)';},3000);}}"
+             "</script></body></html>")
 
 
 if __name__ == "__main__":
