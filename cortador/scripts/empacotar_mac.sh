@@ -46,7 +46,7 @@ find "$OUT" -name '.DS_Store' -delete 2>/dev/null || true
 xattr -cr "$OUT" 2>/dev/null || true
 
 echo "▶ Compactando em $ZIP …"
-ditto -c -k --sequesterRsrc --keepParent "$OUT" "$ZIP"
+ditto -c -k --keepParent "$OUT" "$ZIP"
 
 echo ""
 echo "✅ Pronto! Envie este arquivo para a sua amiga:"
