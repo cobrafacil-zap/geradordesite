@@ -94,6 +94,36 @@ def title_for(text: str, game: str = "", model: str = DEFAULT_MODEL) -> Optional
         return None
 
 
+def hashtags_for(text: str, game: str = "", model: str = DEFAULT_MODEL) -> Optional[List[str]]:
+    """Hashtags PT-BR para o corte (TikTok/Reels/Shorts) — inclui as do jogo (#gta6…)."""
+    if not text.strip():
+        return None
+    g = (game or "").strip()
+    dica = f"O jogo/nicho é: {g}. " if g else ""
+    prompt = (
+        "Você é um social media brasileiro especializado em gaming/vídeos curtos.\n"
+        "Escreva 12 hashtags em português do Brasil para este clipe (TikTok/Reels/Shorts).\n"
+        f"{dica}Regras: sem espaços, sempre com '#', sem repetir; coloque primeiro as "
+        "hashtags do jogo/nicho (ex.: #gta6 #gtavi #gtarp quando for GTA), depois as do "
+        "tema do clipe e por último as gerais/virais (ex: #brasil #viral #fyp).\n\n"
+        f"Transcrição:\\n'''{text[:900]}'''\n\n"
+        "Responda APENAS com as hashtags separadas por espaço."
+    )
+    try:
+        out = _chat(prompt, model=model, temperature=0.4)
+        tags = []
+        for tok in out.replace(",", " ").split():
+            tok = tok.strip().lstrip("#").replace(" ", "")
+            if not tok or not tok.replace("_", "").isalnum():
+                continue
+            tag = "#" + tok.lower()
+            if tag not in tags:
+                tags.append(tag)
+        return tags[:15] or None
+    except Exception:
+        return None
+
+
 def describe(text: str, model: str = DEFAULT_MODEL) -> Optional[str]:
     if not text.strip():
         return None

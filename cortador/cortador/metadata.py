@@ -199,21 +199,49 @@ def make_description(text: str, category: str, title: str, game: Optional[str] =
     )
 
 
-def make_hashtags(text: str, category: str, extra: Optional[List[str]] = None) -> List[str]:
+def _game_tags(game: str = "", text: str = "") -> List[str]:
+    """Hashtags do jogo/nicho (ex.: #gta6 #gtavi #gtarp) a partir do nome do jogo."""
+    g = (game or "").lower()
+    t = (text or "").lower()
+    blob = f"{g} {t}"
+    tags: List[str] = []
+    if "gta" in blob or "grand theft" in blob:
+        if "rp" in g or "roleplay" in g or "fivem" in g:
+            tags += ["#gtarp", "#fivem", "#roleplay"]
+        # a comunidade GTA VI é o maior público → sempre as duas
+        tags += ["#gta6", "#gtavi"]
+        tags += ["#gta", "#gaming"]
+    elif any(k in blob for k in ("minecraft", "roblox", "valorant", "fortnite", "pubg", "lol", "cs2")):
+        tags.append("#gaming")
+    return tags
+
+
+def make_hashtags(text: str, category: str, extra: Optional[List[str]] = None,
+                  game: str = "") -> List[str]:
     t = _strip(text).lower()
     tags: List[str] = []
 
-    # palavras do conteúdo primeiro (específicas do corte)
+    # hashtags vindas da IA entram primeiro (mais certas para o jogo)
+    for x in (extra or []):
+        xx = str(x).strip().replace(" ", "")
+        if not xx:
+            continue
+        xx = xx if xx.startswith("#") else "#" + xx
+        if xx not in tags:
+            tags.append(xx)
+
+    # do jogo/nicho (é o que o público busca: #gta6, #gtavi…)
+    for x in _game_tags(game, text):
+        if x not in tags:
+            tags.append(x)
+
+    # palavras do conteúdo (específicas do corte)
     for kw in extract_keywords(text, 5):
         tag = "#" + re.sub(r"[^a-z0-9]", "", _strip(kw).lower())
         if len(tag) > 3 and tag not in tags:
             tags.append(tag)
 
-    # nicho: só adiciona tags específicas se o conteúdo realmente for daquele tema
-    if "gta" in t or "grand theft" in t:
-        for x in ("#gta", "#gtarp", "#gaming"):
-            if x not in tags:
-                tags.append(x)
+    # nicho: tags específicas do conteúdo (o do jogo já entrou em _game_tags)
     if any(w in t for w in ("carro", "corrida", "drift", "motor", "capot")):
         for x in ("#carros", "#corrida", "#automotivo"):
             if x not in tags:
@@ -229,11 +257,6 @@ def make_hashtags(text: str, category: str, extra: Optional[List[str]] = None) -
         if x not in tags:
             tags.append(x)
 
-    if extra:
-        for x in extra:
-            xx = x if x.startswith("#") else "#" + x
-            if xx not in tags:
-                tags.append(xx)
     return tags[:15]
 
 
@@ -243,16 +266,18 @@ def generate_metadata(
     game: Optional[str] = None,
     virality_label: str = "",
     virality_total: float = 0.0,
+    hashtags: Optional[List[str]] = None,
 ) -> Dict:
     category = category or detect_category(text)
     titles = make_titles(text, category, game)
     title = titles[0]
+    tags = make_hashtags(text, category, extra=hashtags, game=game or "")
     return {
         "title": title,
         "title_options": titles[:6],
         "description": make_description(text, category, title, game),
-        "hashtags": make_hashtags(text, category),
-        "hashtags_str": " ".join(make_hashtags(text, category)),
+        "hashtags": tags,
+        "hashtags_str": " ".join(tags),
         "keywords": extract_keywords(text),
         "category": category,
         "hook": _clean_phrase(text, 12),

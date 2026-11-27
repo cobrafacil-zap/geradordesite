@@ -189,6 +189,15 @@ def run_pipeline(input_path: str, options: Optional[PipelineOptions] = None, log
             ai_d = ai_understand.describe(tr.text)
             if ai_d:
                 meta["description"] = ai_d
+            # hashtags da IA (com as do jogo: #gta6, #gtavi…)
+            ai_h = ai_understand.hashtags_for(tr.text, game=opts.game or "")
+            if ai_h:
+                tags = list(ai_h)
+                for x in metadata._game_tags(opts.game or "", tr.text) + list(meta.get("hashtags") or []):
+                    if x and x not in tags:
+                        tags.append(x)
+                meta["hashtags"] = tags[:15]
+                meta["hashtags_str"] = " ".join(meta["hashtags"])
 
         # 4) eventos de legenda
         events = caption_engine.build_events(

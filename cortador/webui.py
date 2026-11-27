@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import json
+import html as _html
 import shutil
 import tempfile
 import threading
@@ -44,6 +45,11 @@ JOBS_LOCK = threading.Lock()
 
 def _fmt_status(job: dict) -> str:
     return job.get("status", "…")
+
+
+def esc(s) -> str:
+    """Escapa HTML para os blocos de texto copiáveis."""
+    return _html.escape(str(s or ""), quote=False)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -386,7 +392,18 @@ def _render_results(job_id: str, out_dir: str, report: dict) -> str:
             <div class="score {_score_class(score)}"><b>{int(round(float(score) or 0))}</b><i>/100</i></div>
           </div>
           <div class="clip-actions">{''.join(dl)}</div>
-          <div class="clip-desc">{desc}<br><span style="opacity:.65">{tags}</span></div>
+          <div class="copybox">
+            <div class="cbox"><div class="clab">✏️ Título</div>
+              <div class="ctext" id="ct_t{i}">{esc(title)}</div>
+              <button class="cbtn" onclick="copiarEl('ct_t{i}',this)">📋 Copiar</button></div>
+            <div class="cbox"><div class="clab">📝 Legenda (descrição)</div>
+              <div class="ctext" id="ct_d{i}">{esc(desc)}</div>
+              <button class="cbtn" onclick="copiarEl('ct_d{i}',this)">📋 Copiar</button></div>
+            <div class="cbox"><div class="clab">#️⃣ Hashtags</div>
+              <div class="ctext" id="ct_h{i}">{esc(tags)}</div>
+              <button class="cbtn" onclick="copiarEl('ct_h{i}',this)">📋 Copiar</button></div>
+            <button class="cbtn big" id="cb{i}" onclick="copiarTudo({i})">⭐ Copiar tudo (título + legenda + hashtags)</button>
+          </div>
         </div>""")
         queue.append(
             f'<div class="qrow"><span class="t">#{i} {title}</span>'
@@ -497,6 +514,16 @@ pre{background:#070a12;border:1px solid var(--line);border-radius:12px;padding:1
 .icon-btn{width:36px;height:36px;border-radius:10px;background:var(--card2);border:1px solid var(--line);color:#cdd6f4;display:grid;place-items:center;cursor:pointer;text-decoration:none;font-size:15px}
 .icon-btn:hover{border-color:var(--brand);color:#fff}
 .clip-desc{padding:8px 16px 16px;color:var(--muted);font-size:13.5px;line-height:1.5}
+
+/* ===== Blocos de texto copiáveis (título / legenda / hashtags) ===== */
+.copybox{padding:0 14px 16px;display:flex;flex-direction:column;gap:8px}
+.cbox{position:relative;background:#0e1220;border:1px solid var(--line);border-radius:12px;padding:9px 11px}
+.clab{font-size:10.5px;text-transform:uppercase;letter-spacing:.08px;opacity:.6;margin-bottom:5px}
+.ctext{font-size:13.5px;color:#e7ecf7;line-height:1.55;word-break:break-word;padding-right:74px;white-space:pre-wrap}
+.cbtn{position:absolute;top:8px;right:8px;background:var(--card2);border:1px solid var(--line);color:#cdd6f4;border-radius:9px;padding:5px 9px;font-size:12px;cursor:pointer}
+.cbtn:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+.cbtn.big{position:static;width:100%;margin-top:2px;background:linear-gradient(90deg,#ff2d6f,#ffd400);color:#111;font-weight:700;border:0;padding:10px;border-radius:11px}
+.cbtn.big:hover{filter:brightness(1.08);color:#111}
 .queue{position:fixed;top:16px;right:16px;width:340px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;max-height:70vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);z-index:50}
 .queue h4{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}
 .qrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
@@ -651,6 +678,20 @@ RESULT = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
           "var m=document.getElementById('vmodal');"
           "m.addEventListener('click',function(e){if(e.target===this)closeVid();});"
           "document.addEventListener('keydown',function(e){if(e.key==='Escape')closeVid();});"
+          "function _fbcopy(txt){var ta=document.createElement('textarea');ta.value=txt;"
+          "ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();"
+          "try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}"
+          "function copyText(txt,btn){var done=function(){var o=btn.textContent;"
+          "btn.textContent='✅ Copiado!';setTimeout(function(){btn.textContent=o;},1300);};"
+          "if(navigator.clipboard&&navigator.clipboard.writeText){"
+          "navigator.clipboard.writeText(txt).then(done,function(){_fbcopy(txt);done();});}"
+          "else{_fbcopy(txt);done();}}"
+          "function copiarEl(id,btn){copyText(document.getElementById(id).innerText,btn);}"
+          "function copiarTudo(i){"
+          "var t=document.getElementById('ct_t'+i).innerText;"
+          "var d=document.getElementById('ct_d'+i).innerText;"
+          "var h=document.getElementById('ct_h'+i).innerText;"
+          "copyText([t,d,h].filter(Boolean).join('\\n\\n'),document.getElementById('cb'+i));}"
           "</script></body></html>")
 
 
