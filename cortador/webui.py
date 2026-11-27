@@ -21,10 +21,12 @@ import shutil
 import tempfile
 import threading
 import uuid
+import zipfile
 from typing import List, Optional
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from starlette.background import BackgroundTask
 
 from cortador.pipeline import PipelineOptions, run_pipeline
 from cortador.styles import list_styles
@@ -306,6 +308,65 @@ def processar(
     return RedirectResponse(url=f"/job/{job_id}", status_code=303)
 
 
+@app.get("/baixar-todos/{job_id}")
+def baixar_todos(job_id: str):
+    """Gera um ZIP com todos os cortes (MP4 + legendas + relatório)."""
+    d = _safe_job_dir(job_id)
+    if not d:
+        return _error_page("Trabalho não encontrado", "Ele pode ter sido apagado.", status=404)
+
+    cortes_dir = os.path.join(d, "cortes")
+    itens = []  # (caminho, nome_dentro_do_zip)
+    if os.path.isdir(cortes_dir):
+        for nome in sorted(os.listdir(cortes_dir)):
+            if nome.lower().endswith((".mp4", ".srt", ".ass")):
+                itens.append((os.path.join(cortes_dir, nome), "cortes/" + nome))
+    for extra in ("report.md", "report.json"):
+        p = os.path.join(d, extra)
+        if os.path.exists(p):
+            itens.append((p, extra))
+
+    if not any(n.lower().endswith(".mp4") for _, n in itens):
+        return _error_page("Nenhum vídeo ainda",
+                           "Este trabalho ainda não tem cortes prontos.", status=404)
+
+    total = sum(os.path.getsize(p) for p, _ in itens)
+    livre = shutil.disk_usage(d).free
+    if livre < total + 400 * 1024 * 1024:   # precisa do ZIP + folga
+        return _error_page(
+            "Pouco espaço em disco",
+            f"O ZIP precisa de cerca de <b>{_gb(total)} GB</b> e só há "
+            f"<b>{_gb(livre)} GB</b> livres.<br><br>"
+            "Apague trabalhos antigos em <a href='/trabalhos'>📁 Meus trabalhos</a> "
+            "ou baixe os vídeos um a um.", status=507)
+
+    fd, zip_path = tempfile.mkstemp(suffix=".zip", prefix="cortes_", dir=d)
+    os.close(fd)
+    try:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+            for caminho, arc in itens:
+                # vídeos não compactam (só gastam tempo) → guarda sem comprimir
+                tipo = zipfile.ZIP_STORED if arc.lower().endswith(".mp4") else zipfile.ZIP_DEFLATED
+                z.write(caminho, arcname=arc, compress_type=tipo)
+    except Exception as e:
+        _remove_quiet(zip_path)
+        return _error_page("Falha ao criar o ZIP",
+                           "Tente baixar os vídeos um a um.", detail=str(e))
+
+    return FileResponse(
+        zip_path, media_type="application/zip",
+        filename=f"cortes-{job_id}.zip",
+        background=BackgroundTask(_remove_quiet, zip_path),
+    )
+
+
+def _remove_quiet(path: str) -> None:
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
 @app.get("/job/{job_id}", response_class=HTMLResponse)
 def job_page(job_id: str):
     out_dir = os.path.join(BASE_OUT, job_id)
@@ -374,16 +435,19 @@ def _render_results(job_id: str, out_dir: str, report: dict) -> str:
 
         dl = []
         if fname:
-            dl.append(f'<a class="icon-btn" title="Baixar MP4" href="/saida/{job_id}/cortes/{fname}">⬇</a>')
-        for k, ic in (("srt", "📄"), ("ass", "🎨")):
+            dl.append(f'<a class="dlsm" title="Baixar MP4" href="/saida/{job_id}/cortes/{fname}">⬇ Vídeo</a>')
+        for k, ic in (("srt", "📄 SRT"), ("ass", "🎨 ASS")):
             sub = (c.get("subtitles") or {}).get(k)
             if sub:
-                dl.append(f'<a class="icon-btn" title="Legenda {k.upper()}" href="/saida/{job_id}/cortes/{sub}">{ic}</a>')
-        dl.append(f'<span class="icon-btn" title="Agendar (em breve)">🗓</span>')
-        dl.append(f'<span class="icon-btn" title="Recortar (em breve)">✂</span>')
+                dl.append(f'<a class="dlsm ghost" title="Legenda {k.upper()}" href="/saida/{job_id}/cortes/{sub}">{ic}</a>')
+        dl.append(f'<span class="dlsm dim" title="Agendar (em breve)">🗓</span>')
+        dl.append(f'<span class="dlsm dim" title="Recortar (em breve)">✂</span>')
+
+        big_dl = (f'<a class="dlbig" id="db{i}" href="/saida/{job_id}/cortes/{fname}" '
+                  f'onclick="this.textContent=\'⏳ Baixando…\'">⬇ Baixar vídeo</a>') if fname else ""
 
         cards.append(f"""
-        <div class="clip">
+        <div class="clip" data-mp4="/saida/{job_id}/cortes/{fname}">
           <div class="clip-head"><input type="checkbox"><div class="clip-title">#{i} {title}</div></div>
           <div class="thumbwrap" onclick="playVid('/saida/{job_id}/cortes/{fname}')" style="cursor:pointer">
             <img src="/thumb/{job_id}/{fname}" loading="lazy" onerror="this.style.display='none'">
@@ -391,7 +455,7 @@ def _render_results(job_id: str, out_dir: str, report: dict) -> str:
             <div class="timerange">{_fmt_time(start)} - {_fmt_time(end)}</div>
             <div class="score {_score_class(score)}"><b>{int(round(float(score) or 0))}</b><i>/100</i></div>
           </div>
-          <div class="clip-actions">{''.join(dl)}</div>
+          <div class="dlrow">{big_dl}{''.join(dl)}</div>
           <div class="copybox">
             <div class="cbox"><div class="clab">✏️ Título</div>
               <div class="ctext" id="ct_t{i}">{esc(title)}</div>
@@ -414,7 +478,12 @@ def _render_results(job_id: str, out_dir: str, report: dict) -> str:
     n = len(clips)
     topbar = (
         f"<div class='topbar'><div class='tab'>📋 Momentos Virais <span class='cnt'>{n}</span></div>"
-        f"<button class='btn-find' onclick=\"alert('Em breve: buscar momentos por texto')\">+ Encontrar Momentos</button></div>"
+        f"<button class='btn-find' onclick=\"alert('Em breve: buscar momentos por texto')\">+ Encontrar Momentos</button>"
+        f"<div class='dlall'>"
+        f"<a class='dl zip' id='zipbtn' href='/baixar-todos/{job_id}' "
+        f"onclick=\"this.textContent='⏳ Gerando ZIP…';\">⬇ Baixar TODOS (ZIP)</a>"
+        f"<button class='dl ghost' onclick='baixarSel(this)'>⬇ Baixar selecionados</button>"
+        f"</div></div>"
         f"<div class='selall'><input type='checkbox' onclick=\"document.querySelectorAll('.clip input').forEach(c=>c.checked=this.checked)\"> "
         f"Selecionar todos os {n} clipes</div>"
     )
@@ -513,6 +582,19 @@ pre{background:#070a12;border:1px solid var(--line);border-radius:12px;padding:1
 .clip-actions{display:flex;gap:6px;padding:12px 16px 4px;flex-wrap:wrap}
 .icon-btn{width:36px;height:36px;border-radius:10px;background:var(--card2);border:1px solid var(--line);color:#cdd6f4;display:grid;place-items:center;cursor:pointer;text-decoration:none;font-size:15px}
 .icon-btn:hover{border-color:var(--brand);color:#fff}
+
+/* ===== Download fácil (botão grande + chips) ===== */
+.dlrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 14px 4px}
+.dlbig{flex:1 1 100%;display:flex;align-items:center;justify-content:center;gap:9px;padding:15px;border-radius:12px;background:linear-gradient(135deg,#2ee6a8,#12b981);color:#04150e;font-weight:800;font-size:16px;text-decoration:none;box-shadow:0 10px 24px rgba(46,230,168,.22);cursor:pointer;border:0}
+.dlbig:hover{filter:brightness(1.07);color:#04150e}
+.dlsm{padding:8px 12px;border-radius:9px;background:#1b2136;border:1px solid var(--line);color:#cdd6f4;font-size:12.5px;font-weight:700;text-decoration:none;cursor:pointer}
+.dlsm:hover{border-color:var(--brand);color:#fff}
+.dlsm.dim{opacity:.4;cursor:default}
+.dlsm.dim:hover{border-color:var(--line);color:#cdd6f4}
+.dlall{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+button.dl{border:0;cursor:pointer;font-family:inherit}
+.dl.zip{background:linear-gradient(135deg,var(--brand),#ff5f8f);box-shadow:0 10px 24px rgba(255,45,111,.25)}
+.dl.zip:hover{filter:brightness(1.07);color:#fff}
 .clip-desc{padding:8px 16px 16px;color:var(--muted);font-size:13.5px;line-height:1.5}
 
 /* ===== Blocos de texto copiáveis (título / legenda / hashtags) ===== */
@@ -692,6 +774,25 @@ RESULT = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
           "var d=document.getElementById('ct_d'+i).innerText;"
           "var h=document.getElementById('ct_h'+i).innerText;"
           "copyText([t,d,h].filter(Boolean).join('\\n\\n'),document.getElementById('cb'+i));}"
+          "function baixarSel(btn){"
+          "var urls=[];"
+          "document.querySelectorAll('.clip').forEach(function(c){"
+          "var cb=c.querySelector('input[type=checkbox]');"
+          "if(cb&&cb.checked&&c.dataset.mp4&&c.dataset.mp4.indexOf('.mp4')>-1)urls.push(c.dataset.mp4);});"
+          "if(!urls.length){alert('Marque pelo menos um clipe — ou use \\'Baixar TODOS (ZIP)\\'.');return;}"
+          "var old=btn.textContent;btn.disabled=true;"
+          "var i=0;"
+          "(function next(){"
+          "if(i>=urls.length){btn.textContent='✅ '+urls.length+' vídeo(s) baixado(s)!';"
+          "setTimeout(function(){btn.textContent=old;btn.disabled=false;},1800);return;}"
+          "var u=urls[i];"
+          "fetch(u).then(function(r){if(!r.ok)throw 0;return r.blob();}).then(function(b){"
+          "var a=document.createElement('a');var href=URL.createObjectURL(b);"
+          "a.href=href;a.download=u.split('/').pop()||'corte.mp4';"
+          "document.body.appendChild(a);a.click();a.remove();"
+          "setTimeout(function(){URL.revokeObjectURL(href);},10000);"
+          "i++;btn.textContent='⏳ Baixando '+i+'/'+urls.length;next();"
+          "}).catch(function(){btn.textContent='❌ Erro ao baixar';btn.disabled=false;});})();}"
           "</script></body></html>")
 
 
