@@ -154,9 +154,31 @@ def limpar():
     return RedirectResponse(url="/trabalhos", status_code=303)
 
 
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+
+def _gb(n: int) -> float:
+    return round(n / (1024 ** 3), 1)
+
+
+def _error_page(title: str, msg: str, detail: str = "", status: int = 500):
+    html = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+            "<title>Não foi possível processar</title><style>" + _CSS + "</style></head><body>"
+            "<div class='wrap'><h1>⚠️ " + title + "</h1>"
+            "<p class='lead'>" + msg + "</p>"
+            "<pre>" + (detail or "") + "</pre>"
+            "<p><a class='dl' href='/'>← Voltar e tentar de novo</a> "
+            "<a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a></p>"
+            "</div></body></html>")
+    return HTMLResponse(html, status_code=status)
+
+
 @app.post("/processar")
 def processar(
-    video: UploadFile = File(...),
+    video: Optional[UploadFile] = File(None),
     n_cortes: int = Form(4),
     formato: str = Form("9:16"),
     estilo: str = Form("gaming_bold"),
@@ -169,19 +191,50 @@ def processar(
     legenda: str = Form("off"),
     ia: str = Form("on"),
 ):
+    if video is None or not (video.filename or "").strip():
+        return _error_page(
+            "Escolha um vídeo",
+            "Nenhum arquivo foi enviado. Clique em <b>Escolher arquivo</b>, selecione a live e "
+            "depois em <b>▶ Processar vídeo</b>.",
+            status=400,
+        )
+
     job_id = uuid.uuid4().hex[:12]
     out_dir = os.path.join(BASE_OUT, job_id)
     os.makedirs(out_dir, exist_ok=True)
 
+    # espaço em disco: um vídeo longo precisa de ~2x o tamanho (original + cortes + temporários)
+    free = shutil.disk_usage(BASE_OUT).free
+    if free < 3 * 1024 ** 3:   # menos de 3 GB livres
+        shutil.rmtree(out_dir, ignore_errors=True)
+        return _error_page(
+            "Pouco espaço em disco",
+            f"Só há <b>{_gb(free)} GB livres</b> no disco. Para processar uma live longa são "
+            "necessários pelo menos <b>3 GB</b> (e idealmente 10 GB).<br><br>"
+            "Apague trabalhos antigos em <a href='/trabalhos'>📁 Meus trabalhos</a> "
+            "(ou o botão <b>Limpar todos</b>) e tente novamente.",
+            status=507,
+        )
+
     # salva o vídeo enviado (em blocos, para não travar a interface)
     ext = os.path.splitext(video.filename or "video.mp4")[1] or ".mp4"
     tmp_video = os.path.join(out_dir, f"entrada{ext}")
-    with open(tmp_video, "wb") as f:
-        while True:
-            chunk = video.file.read(4 * 1024 * 1024)
-            if not chunk:
-                break
-            f.write(chunk)
+    try:
+        with open(tmp_video, "wb") as f:
+            while True:
+                chunk = video.file.read(4 * 1024 * 1024)
+                if not chunk:
+                    break
+                f.write(chunk)
+    except OSError as e:
+        shutil.rmtree(out_dir, ignore_errors=True)
+        return _error_page(
+            "Falha ao salvar o vídeo",
+            "O disco encheu durante o envio. Libere espaço (apague trabalhos antigos ou "
+            "arquivos grandes do computador) e tente de novo.",
+            detail=str(e),
+            status=507,
+        )
 
     with JOBS_LOCK:
         JOBS[job_id] = {"status": "processando", "out_dir": out_dir, "log": [], "report": None}
@@ -216,6 +269,28 @@ def processar(
             with JOBS_LOCK:
                 JOBS[job_id]["report"] = report
                 JOBS[job_id]["status"] = "pronto"
+
+            # libera espaço: apaga o vídeo original enviado (os cortes já estão prontos)
+            try:
+                if os.path.exists(tmp_video):
+                    free_now = shutil.disk_usage(BASE_OUT).free
+                    if free_now < 25 * 1024 ** 3:   # disco apertado → não guarda o original
+                        os.remove(tmp_video)
+                        log("🧹 Vídeo original removido para liberar espaço "
+                            "(os cortes continuam disponíveis).")
+            except OSError:
+                pass
+            # limpa temporários (wavs, trechos do Demucs)
+            shutil.rmtree(os.path.join(out_dir, "_work"), ignore_errors=True)
+        except OSError as e:
+            with JOBS_LOCK:
+                JOBS[job_id]["status"] = "erro"
+                if getattr(e, "errno", None) == 28:
+                    JOBS[job_id]["log"].append(
+                        "ERRO: disco cheio (sem espaço). Apague trabalhos antigos em "
+                        "'Meus trabalhos' e processe de novo.")
+                else:
+                    JOBS[job_id]["log"].append(f"ERRO: {e}")
         except Exception as e:  # pragma: no cover
             with JOBS_LOCK:
                 JOBS[job_id]["status"] = "erro"
@@ -453,6 +528,7 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "<title>Cortador de Vídeos com Legenda</title><style>" + _CSS + "</style></head><body><div class='wrap'>"
         "<h1>🎬 Cortador de Vídeos com Legenda</h1>"
         "<p style='text-align:right;margin:-10px 0 0'><a class='dl ghost' href='/trabalhos'>📁 Meus trabalhos</a></p>"
+        f"<p class='lead' style='font-size:13px'>💾 Espaço livre no disco: <b>{_gb(shutil.disk_usage(BASE_OUT).free)} GB</b></p>"
         "<p class='lead'>Suba a live, escolha as opções e receba os melhores cortes (1–3 min) "
         "com legenda profissional, título, hashtags e score de viralidade. "
         "<b>100% privado:</b> o vídeo é processado aqui, nada é enviado para fora.</p>"
