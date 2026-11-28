@@ -24,9 +24,11 @@ import uuid
 import zipfile
 from typing import List, Optional
 
-from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, RedirectResponse
 from starlette.background import BackgroundTask
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from cortador.pipeline import PipelineOptions, run_pipeline
 from cortador.styles import list_styles
@@ -381,6 +383,12 @@ def _gb(n: int) -> float:
     return round(n / (1024 ** 3), 1)
 
 
+def _size(n: int) -> str:
+    """Tamanho legível: 3,05 GB ou 480 MB."""
+    n = int(n or 0)
+    return f"{n / (1024 ** 3):.2f} GB" if n >= 1024 ** 3 else f"{n / (1024 ** 2):.0f} MB"
+
+
 def _error_page(title: str, msg: str, detail: str = "", status: int = 500):
     html = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width, initial-scale=1'>"
@@ -394,9 +402,65 @@ def _error_page(title: str, msg: str, detail: str = "", status: int = 500):
     return HTMLResponse(html, status_code=status)
 
 
+# ---------------------------------------------------------------------------
+#  📤 ENVIO EM FLUXO — o vídeo vai direto para a pasta do trabalho
+#  (1 cópia só, sem arquivo temporário, com checagem de espaço ANTES de ler)
+# ---------------------------------------------------------------------------
+
+@app.put("/enviar")
+async def enviar(request: Request, nome: str = "video.mp4"):
+    job_id = uuid.uuid4().hex[:12]
+    out_dir = os.path.join(BASE_OUT, job_id)
+    os.makedirs(out_dir, exist_ok=True)
+
+    try:
+        tamanho = int(request.headers.get("content-length") or 0)
+    except (TypeError, ValueError):
+        tamanho = 0
+
+    livre = shutil.disk_usage(BASE_OUT).free
+    # vídeo + cortes (~60% do vídeo) + temporários de renderização
+    necessario = int(tamanho * 1.6) + 600 * 1024 * 1024
+    if tamanho and livre < necessario:
+        shutil.rmtree(out_dir, ignore_errors=True)
+        print(f"   • envio recusado: precisa {_size(necessario)}, livre {_size(livre)}")
+        return _error_page(
+            "Pouco espaço em disco",
+            f"Este vídeo tem <b>{_size(tamanho)}</b> e o processamento precisa de cerca de "
+            f"<b>{_size(necessario)}</b>, mas só há <b>{_size(livre)}</b> livres.<br><br>"
+            "Apague trabalhos antigos em <a href='/trabalhos'>📁 Meus trabalhos</a> "
+            "ou libere espaço no Mac e tente de novo.", status=507)
+
+    ext = os.path.splitext(os.path.basename(nome or ""))[1] or ".mp4"
+    dest = os.path.join(out_dir, f"entrada{ext}")
+    recebido = 0
+    try:
+        with open(dest, "wb") as f:
+            async for chunk in request.stream():
+                if chunk:
+                    f.write(chunk)
+                    recebido += len(chunk)
+    except Exception as e:
+        shutil.rmtree(out_dir, ignore_errors=True)
+        print(f"   • envio interrompido: {e}")
+        return _error_page(
+            "Envio interrompido",
+            "O envio do vídeo foi cortado (disco cheio ou conexão caiu). "
+            "Libere espaço e tente de novo.", detail=str(e), status=500)
+
+    if recebido == 0:
+        shutil.rmtree(out_dir, ignore_errors=True)
+        return _error_page("Nenhum arquivo recebido",
+                           "Escolha um vídeo e clique em <b>▶ Processar vídeo</b>.", status=400)
+
+    print(f"   • vídeo recebido: {job_id} · {_size(recebido)}")
+    return JSONResponse({"job_id": job_id, "bytes": recebido})
+
+
 @app.post("/processar")
 def processar(
     video: Optional[UploadFile] = File(None),
+    job_id: str = Form(""),
     n_cortes: int = Form(4),
     formato: str = Form("9:16"),
     estilo: str = Form("gaming_bold"),
@@ -409,50 +473,59 @@ def processar(
     legenda: str = Form("off"),
     ia: str = Form("on"),
 ):
-    if video is None or not (video.filename or "").strip():
-        return _error_page(
-            "Escolha um vídeo",
-            "Nenhum arquivo foi enviado. Clique em <b>Escolher arquivo</b>, selecione a live e "
-            "depois em <b>▶ Processar vídeo</b>.",
-            status=400,
-        )
+    # --- caminho novo: o vídeo já foi enviado por PUT /enviar ---
+    if job_id:
+        out_dir = os.path.join(BASE_OUT, job_id)
+        entradas = [f for f in os.listdir(out_dir) if f.startswith("entrada")] if os.path.isdir(out_dir) else []
+        if not entradas:
+            print(f"   • processar: trabalho {job_id} sem vídeo (reenvie)")
+            return _error_page("Vídeo não encontrado",
+                               "O vídeo não está mais lá. Envie de novo.", status=400)
+        tmp_video = os.path.join(out_dir, entradas[0])
+    else:
+        # --- compatibilidade (scripts/curl): envio multipart ---
+        if video is None or not (video.filename or "").strip():
+            print("   • processar: nenhum arquivo recebido")
+            return _error_page(
+                "Escolha um vídeo",
+                "Nenhum arquivo foi enviado. Clique em <b>Escolher arquivo</b>, selecione a live e "
+                "depois em <b>▶ Processar vídeo</b>.",
+                status=400,
+            )
+        job_id = uuid.uuid4().hex[:12]
+        out_dir = os.path.join(BASE_OUT, job_id)
+        os.makedirs(out_dir, exist_ok=True)
 
-    job_id = uuid.uuid4().hex[:12]
-    out_dir = os.path.join(BASE_OUT, job_id)
-    os.makedirs(out_dir, exist_ok=True)
+        free = shutil.disk_usage(BASE_OUT).free
+        if free < 3 * 1024 ** 3:
+            shutil.rmtree(out_dir, ignore_errors=True)
+            return _error_page(
+                "Pouco espaço em disco",
+                f"Só há <b>{_gb(free)} GB livres</b> no disco. Para processar uma live longa são "
+                "necessários pelo menos <b>3 GB</b> (e idealmente 10 GB).<br><br>"
+                "Apague trabalhos antigos em <a href='/trabalhos'>📁 Meus trabalhos</a> "
+                "(ou o botão <b>Limpar todos</b>) e tente novamente.",
+                status=507,
+            )
 
-    # espaço em disco: um vídeo longo precisa de ~2x o tamanho (original + cortes + temporários)
-    free = shutil.disk_usage(BASE_OUT).free
-    if free < 3 * 1024 ** 3:   # menos de 3 GB livres
-        shutil.rmtree(out_dir, ignore_errors=True)
-        return _error_page(
-            "Pouco espaço em disco",
-            f"Só há <b>{_gb(free)} GB livres</b> no disco. Para processar uma live longa são "
-            "necessários pelo menos <b>3 GB</b> (e idealmente 10 GB).<br><br>"
-            "Apague trabalhos antigos em <a href='/trabalhos'>📁 Meus trabalhos</a> "
-            "(ou o botão <b>Limpar todos</b>) e tente novamente.",
-            status=507,
-        )
-
-    # salva o vídeo enviado (em blocos, para não travar a interface)
-    ext = os.path.splitext(video.filename or "video.mp4")[1] or ".mp4"
-    tmp_video = os.path.join(out_dir, f"entrada{ext}")
-    try:
-        with open(tmp_video, "wb") as f:
-            while True:
-                chunk = video.file.read(4 * 1024 * 1024)
-                if not chunk:
-                    break
-                f.write(chunk)
-    except OSError as e:
-        shutil.rmtree(out_dir, ignore_errors=True)
-        return _error_page(
-            "Falha ao salvar o vídeo",
-            "O disco encheu durante o envio. Libere espaço (apague trabalhos antigos ou "
-            "arquivos grandes do computador) e tente de novo.",
-            detail=str(e),
-            status=507,
-        )
+        ext = os.path.splitext(video.filename or "video.mp4")[1] or ".mp4"
+        tmp_video = os.path.join(out_dir, f"entrada{ext}")
+        try:
+            with open(tmp_video, "wb") as f:
+                while True:
+                    chunk = video.file.read(4 * 1024 * 1024)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+        except OSError as e:
+            shutil.rmtree(out_dir, ignore_errors=True)
+            return _error_page(
+                "Falha ao salvar o vídeo",
+                "O disco encheu durante o envio. Libere espaço (apague trabalhos antigos ou "
+                "arquivos grandes do computador) e tente de novo.",
+                detail=str(e),
+                status=507,
+            )
 
     with JOBS_LOCK:
         JOBS[job_id] = {"status": "processando", "out_dir": out_dir, "log": [], "report": None}
@@ -927,40 +1000,50 @@ PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         "</div></div>"
         "<script>"
         "function fmtMB(n){return (n/1048576).toFixed(1)+' MB';}"
+        "function showErr(xhr){"
+        "var t=xhr.responseText||'';"
+        "if(t.indexOf('<html')>-1){document.open();document.write(t);document.close();return;}"
+        "alert('Erro no envio ('+xhr.status+'). Tente novamente.');}"
         "document.getElementById('pform').addEventListener('submit',function(e){"
         "e.preventDefault();"
         "var form=this;"
+        "var file=form.querySelector(\"input[type=file]\").files[0];"
         "var l=document.getElementById('loading'),fill=document.getElementById('lfill');"
         "var msg=document.getElementById('lmsg'),ttl=document.getElementById('ltitle');"
         "var b=document.querySelector(\"button[type=submit]\");"
         "l.style.display='flex';"
         "if(b){b.disabled=true;b.textContent='⏳ Enviando…';}"
+        "if(!file){ttl.textContent='Escolha um vídeo';"
+        "msg.innerHTML='Nenhum arquivo selecionado.';"
+        "if(b){b.disabled=false;b.textContent='▶ Processar vídeo';}"
+        "setTimeout(function(){l.style.display='none';},2200);return;}"
         "var xhr=new XMLHttpRequest();"
-        "xhr.open('POST',form.action,true);"
+        "xhr.open('PUT','/enviar?nome='+encodeURIComponent(file.name),true);"
         "xhr.upload.onprogress=function(ev){"
         "if(!ev.lengthComputable)return;"
         "var pct=Math.round(ev.loaded/ev.total*100);"
         "fill.style.width=pct+'%';"
         "msg.innerHTML=pct+'% enviado ('+fmtMB(ev.loaded)+' de '+fmtMB(ev.total)+')<br><b>Não feche esta página.</b>';"
-        "if(pct>=100){ttl.textContent='Enviado! Preparando o processamento…';}"
+        "if(pct>=100){ttl.textContent='Enviado! Enviando as opções…';}"
         "};"
         "xhr.onload=function(){"
         "if(xhr.status>=200&&xhr.status<400){"
+        "var jid='';try{jid=JSON.parse(xhr.responseText).job_id||'';}catch(err){}"
+        "var fd=new FormData(form);fd.delete('video');fd.append('job_id',jid);"
+        "var x2=new XMLHttpRequest();"
+        "x2.open('POST',form.action,true);"
+        "x2.onload=function(){"
+        "if(x2.status>=200&&x2.status<400){"
         "ttl.textContent='Processando seu vídeo…';"
         "msg.innerHTML='Analisando, transcrevendo e renderizando.<br><b>Não feche esta página.</b>';"
         "fill.style.width='100%';"
-        "setTimeout(function(){window.location=xhr.responseURL||'/trabalhos';},700);"
-        "}else{"
-        "l.style.display='none';"
-        "if(b){b.disabled=false;b.textContent='▶ Processar vídeo';}"
-        "alert('Erro no envio ('+xhr.status+'). Tente novamente.');"
-        "}};"
-        "xhr.onerror=function(){"
-        "l.style.display='none';"
-        "if(b){b.disabled=false;b.textContent='▶ Processar vídeo';}"
-        "alert('Falha de conexão durante o envio. Tente novamente.');"
-        "};"
-        "xhr.send(new FormData(form));"
+        "setTimeout(function(){window.location=x2.responseURL||'/trabalhos';},700);"
+        "}else{showErr(x2);}};"
+        "x2.onerror=function(){showErr(x2);};"
+        "x2.send(fd);"
+        "}else{showErr(xhr);}};"
+        "xhr.onerror=function(){showErr(xhr);};"
+        "xhr.send(file);"
         "});"
         "</script>"
         "</body></html>")
@@ -1105,6 +1188,55 @@ FILA_PAGE = ("<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
              "if(b){b.textContent='🔔 Próximo lembrete em 10 min';"
              "setTimeout(function(){b.textContent='🔔 Lembretes ligados (a cada 10 min)';},3000);}}"
              "</script></body></html>")
+
+
+# ---------------------------------------------------------------------------
+#  Erros amigáveis (nada de "400 Bad Request" cru na tela)
+# ---------------------------------------------------------------------------
+
+@app.exception_handler(RequestValidationError)
+async def _req_validation(request: Request, exc: RequestValidationError):
+    print(f"   • formulário inválido em {request.url.path}: {exc.errors()[:2]}")
+    return _error_page(
+        "Dados inválidos",
+        "Faltou alguma informação no formulário. Volte e tente de novo.",
+        detail=str(exc.errors()[:2]), status=400)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _http_exc(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 400:
+        print(f"   • HTTP 400 em {request.url.path}: {exc.detail}")
+        return _error_page(
+            "Não consegui ler os dados enviados",
+            "O envio veio incompleto ou foi interrompido. Clique em "
+            "<b>▶ Processar vídeo</b> de novo — o progresso aparece na tela.",
+            detail=str(exc.detail), status=400)
+    return HTMLResponse(str(exc.detail), status_code=exc.status_code, headers=exc.headers)
+
+
+# ---------------------------------------------------------------------------
+#  Limpa trabalhos que ficaram pela metade (o servidor reiniciou no meio)
+# ---------------------------------------------------------------------------
+
+def _limpar_orfaos() -> None:
+    if not os.path.isdir(BASE_OUT):
+        return
+    for name in os.listdir(BASE_OUT):
+        d = os.path.join(BASE_OUT, name)
+        if os.path.isdir(d) and not os.path.exists(os.path.join(d, "report.json")):
+            tamanho = 0
+            for raiz, _, arq in os.walk(d):
+                for a in arq:
+                    try:
+                        tamanho += os.path.getsize(os.path.join(raiz, a))
+                    except OSError:
+                        pass
+            shutil.rmtree(d, ignore_errors=True)
+            print(f"   • trabalho incompleto removido: {name} ({_size(tamanho)} liberados)")
+
+
+_limpar_orfaos()
 
 
 if __name__ == "__main__":
